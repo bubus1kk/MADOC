@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MADOC.App/MADOC.App.csproj" />
+  <Project Path="MADOC.Core/MADOC.Core.csproj" />
+  <Project Path="MADOC.Tests/MADOC.Tests.csproj" />
+</Solution>
