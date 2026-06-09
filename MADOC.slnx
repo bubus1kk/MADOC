@@ -1,5 +1,6 @@
 <Solution>
-  <Project Path="MADOC.App/MADOC.App.csproj" />
-  <Project Path="MADOC.Core/MADOC.Core.csproj" />
+  <Project Path="MADOC.App/MADOC.App.csproj" Id="5818a43d-c940-4537-b4b5-7b7e0eb23503" />
+  <Project Path="MADOC.Domain/MADOC.Domain.csproj" Id="9dc2fb86-7548-4cb7-87d7-3971b7fc205a" />
+  <Project Path="MADOC.Infrastructure/MADOC.Infrastructure.csproj" Id="6e42eb36-443c-4f64-9f98-67bfccb48a52" />
   <Project Path="MADOC.Tests/MADOC.Tests.csproj" />
 </Solution>
