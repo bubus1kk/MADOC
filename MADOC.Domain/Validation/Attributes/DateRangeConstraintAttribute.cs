@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-using MADOC.Domain.Documents.Ranges;
+﻿using MADOC.Domain.Ranges;
+using System.ComponentModel.DataAnnotations;
 
 namespace MADOC.Domain.Validation.Attributes;
 
