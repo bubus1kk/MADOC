@@ -70,7 +70,7 @@ public class DateTimeConstraintAttribute : ValidationAttribute
             return new ValidationResult($"Дата и время не должны быть позже поля '{DependsOnField}'.");
 
         if (Dependency == DependencyRule.NotLessThan && currentDateTime < otherDateTime)
-            return new Valid    ationResult($"Дата и время не должны быть раньше поля '{DependsOnField}'.");
+            return new ValidationResult($"Дата и время не должны быть раньше поля '{DependsOnField}'.");
 
         return null;
     }

@@ -70,14 +70,14 @@ namespace MADOC.Domain.Validation.Attributes
 
             if (property is null)
             {
-                return new ValidationResult($"Зависимое поле {DependsOnField} не найдено");
+                return new ValidationResult($"Сравниваемое поле {DependsOnField} не найдено");
             }
 
             var otherValue = property.GetValue(validationContext.ObjectInstance);
 
             if (otherValue is not DateOnly)
             {
-                return new ValidationResult($"Значение зависимого поля {DependsOnField} должно быть DateOnly.");
+                return new ValidationResult($"Значение сравниваемого поля {DependsOnField} должно быть DateOnly.");
             }
 
             var otherDate = (DateOnly)otherValue;

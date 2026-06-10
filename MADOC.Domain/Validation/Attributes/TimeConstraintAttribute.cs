@@ -37,13 +37,13 @@ namespace MADOC.Domain.Validation.Attributes
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(MinTime))
+            if (!string.IsNullOrWhiteSpace(MaxTime))
             {
                 var maxTime = ParseTime(MaxTime);
 
-                if (currentTime < maxTime)
+                if (currentTime > maxTime)
                 {
-                    return new ValidationResult($"Время не должно быть позже чем минимально возможное {MaxTime}");
+                    return new ValidationResult($"Время не должно быть позже чем максимально возможное {MaxTime}");
                 }
             }
 
@@ -73,26 +73,26 @@ namespace MADOC.Domain.Validation.Attributes
 
             if (property == null)
             {
-                return new ValidationResult($"Зависимое поле {DependsOnField} не найдено");
+                return new ValidationResult($"Сравниваемое поле {DependsOnField} не найдено");
             }
 
             var otherValue = property.GetValue(validationContext.ObjectInstance);
 
             if (otherValue is not TimeOnly)
             {
-                return new ValidationResult($"Значение зависимого поля {DependsOnField} должно быть типа TimeOnly");
+                return new ValidationResult($"Значение сравниваемого поля {DependsOnField} должно быть типа TimeOnly");
             }
 
             var otherTime = (TimeOnly)otherValue;
 
             if (Dependency == DependencyRule.NotMoreThan && currentTime > otherTime) 
             {
-                return new ValidationResult($"Время не должно быть раньше, чем время в поле {DependsOnField}");          
+                return new ValidationResult($"Время не должно быть позже, чем время в поле {DependsOnField}");          
             }
 
             if (Dependency == DependencyRule.NotLessThan && currentTime < otherTime)
             {
-                return new ValidationResult($"Время не должно быть позже, чем время в поле {DependsOnField}");
+                return new ValidationResult($"Время не должно быть раньше, чем время в поле {DependsOnField}");
             }
 
             return null;
