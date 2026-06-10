@@ -59,7 +59,7 @@ namespace MADOC.Domain.Validation.Attributes
             return ValidationResult.Success;
         }
 
-        private ValidationResult? ValidateDependency(double currentValue, ValidationContext validationContext)
+        private ValidationResult? ValidateDependency(DateOnly currentDate, ValidationContext validationContext)
         {
             if (string.IsNullOrWhiteSpace(DependsOnField))
             {

@@ -5,7 +5,8 @@ using System.Reflection;
 
 namespace MADOC.Domain.Validation.Attributes
 {
-    public class TimeConstraintAttribute
+    [AttributeUsage(AttributeTargets.Property)]
+    public class TimeConstraintAttribute : ValidationAttribute
     {
         public string MinTime { get; set; } = "";
         public string MaxTime { get; set; } = "";
@@ -57,6 +58,8 @@ namespace MADOC.Domain.Validation.Attributes
 
                 return ValidationResult.Success;
             }
+
+            return ValidationResult.Success;
         }
 
         private ValidationResult? ValidateDependency(TimeOnly currentTime, ValidationContext validationContext)
