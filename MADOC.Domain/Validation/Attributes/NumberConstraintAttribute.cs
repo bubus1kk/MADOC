@@ -1,15 +1,18 @@
-﻿using MADOC.Domain.Ranges;
+﻿using MADOC.Domain.Validation.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Reflection;
 
 namespace MADOC.Domain.Validation.Attributes
 {
     [AttributeUsage(AttributeTargets.Property)]
-    public class NumberConstraintAtribute : ValidationAttribute
+    public class NumberConstraintAttribute : ValidationAttribute
     {
         public double MinValue { get; set; } = double.MinValue;
         public double MaxValue { get; set; } = double.MaxValue;
-
         public bool AllowFloats { get; set; } = true;
+        public string? DependsOnField { get; set; }
+        public DependencyRule Dependency { get; set; } = DependencyRule.None;
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
@@ -18,22 +21,57 @@ namespace MADOC.Domain.Validation.Attributes
                 return ValidationResult.Success;
             }
 
-            if (value is not NumberRange range)
+            if (!TryConvertToDouble(value, out var number))
             {
-                return new ValidationResult("Значение должно находиться в заданном числовом диапазоне");
+                return new ValidationResult("Значение должно быть числом");
             }
 
-            if (range.From > range.To)
+            if (number < MinValue)
             {
-                return new ValidationResult("Нижняя граница диапазона значений не может быть больше верхней");
+                return new ValidationResult($"Число не может быть меньше минимального значения, равного {MinValue}");
             }
 
-            if (!AllowFloats && (!IsWholeNumber(range.From) || !IsWholeNumber(range.To)))
+            if (number > MaxValue)
+            {
+                return new ValidationResult($"Число не может быть больше максимального значения, равного {MaxValue}");
+            }
+
+            if (!AllowFloats && !IsWholeNumber(number))
             {
                 return new ValidationResult("Числа с плавающей точкой запрещены");
             }
 
+            if (Dependency != DependencyRule.None)
+            {
+                var dependencyResult = ValidateDependency(number, validationContext);
+
+                if (dependencyResult != null)
+                {
+                    return dependencyResult;
+                }
+            }
+
             return ValidationResult.Success;
+        }
+
+        private static bool TryConvertToDouble(object? value, out double result)
+        {
+            result = 0;
+
+            if (value is null)
+            {
+                return false;
+            }
+
+            try
+            {
+                result = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool IsWholeNumber(double value)
@@ -47,6 +85,42 @@ namespace MADOC.Domain.Validation.Attributes
             {
                 return false;
             }
+        }
+
+        private ValidationResult? ValidateDependency(double currentValue, ValidationContext validationContext)
+        {
+            if (string.IsNullOrWhiteSpace(DependsOnField))
+            {
+                return new ValidationResult("Необходимо указать имя зависимого поля");
+            }
+
+            var objectType = validationContext.ObjectInstance.GetType();
+
+            var dependentProperty = objectType.GetProperty(DependsOnField, BindingFlags.Instance | BindingFlags.Public);
+
+            if (dependentProperty == null)
+            {
+                return new ValidationResult($"Зависисмое поле {DependsOnField} не найдено");
+            }
+
+            var dependentVaule = dependentProperty.GetValue(validationContext.ObjectInstance);
+
+            if (!TryConvertToDouble(dependentVaule, out var otherValue))
+            {
+                return new ValidationResult($"Значаение зависимого поля {DependsOnField} должно быть числом");
+            }
+
+            if (Dependency == DependencyRule.NotMoreThan && currentValue > otherValue)
+            {
+                return new ValidationResult($"Текущее знаение должно быть не больше, чем  значение {DependsOnField}");
+            }
+
+            if (Dependency == DependencyRule.NotMoreThan && currentValue < otherValue)
+            {
+                return new ValidationResult($"Текущее знаение должно быть не меньше, чем значение {DependsOnField}");
+            }
+
+            return null;
         }
     }
 }
