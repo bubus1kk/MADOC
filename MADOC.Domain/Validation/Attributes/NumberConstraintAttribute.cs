@@ -100,14 +100,14 @@ namespace MADOC.Domain.Validation.Attributes
 
             if (dependentProperty == null)
             {
-                return new ValidationResult($"Зависисмое поле {DependsOnField} не найдено");
+                return new ValidationResult($"Сравниваемое поле {DependsOnField} не найдено");
             }
 
             var dependentVaule = dependentProperty.GetValue(validationContext.ObjectInstance);
 
             if (!TryConvertToDouble(dependentVaule, out var otherValue))
             {
-                return new ValidationResult($"Значаение зависимого поля {DependsOnField} должно быть числом");
+                return new ValidationResult($"Значаение сравниваемого поля {DependsOnField} должно быть числом");
             }
 
             if (Dependency == DependencyRule.NotMoreThan && currentValue > otherValue)
