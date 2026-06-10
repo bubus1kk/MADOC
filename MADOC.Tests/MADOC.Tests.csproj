@@ -12,7 +12,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MADOC.Domain\MADOC.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Domain\" />
   </ItemGroup>
 
 </Project>
