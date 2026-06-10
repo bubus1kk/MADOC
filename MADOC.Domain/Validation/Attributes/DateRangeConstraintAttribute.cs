@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-﻿using System.ComponentModel.DataAnnotations;
-using MADOC.Domain.Ranges;
-=======
-﻿using MADOC.Domain.Ranges;
 using System.ComponentModel.DataAnnotations;
->>>>>>> 69cb5be0cd028c12aac43cadd31dbd7ce21043a7
+using MADOC.Domain.Ranges;
 
 namespace MADOC.Domain.Validation.Attributes;
 

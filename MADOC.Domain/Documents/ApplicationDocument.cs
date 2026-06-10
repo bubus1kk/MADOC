@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using MADOC.Domain.Documents.Ranges;
+using MADOC.Domain.Ranges;
 using MADOC.Domain.Validation.Attributes;
 using MADOC.Domain.Validation.Enums;
 
@@ -86,8 +86,8 @@ public class ApplicationDocument : BaseDocument
     [Display(Name = "Количество участников")]
     [Required]
     [NumberConstraint(
-        Min = 1,
-        Max = 500,
+        MinValue = 1,
+        MaxValue = 500,
         AllowFloats = false)]
     public int? ParticipantsCount { get; set; }
 
@@ -103,8 +103,8 @@ public class ApplicationDocument : BaseDocument
     [Display(Name = "Дата подачи заявления")]
     [Required]
     [DateConstraint(
-        Min = "2026-01-01",
-        Max = "2030-12-31")]
+        MinDate = "2026-01-01",
+        MaxDate = "2030-12-31")]
     public DateOnly? ApplicationDate { get; set; }
 
     [Display(Name = "Дата начала мероприятия")]
@@ -124,15 +124,15 @@ public class ApplicationDocument : BaseDocument
     [Display(Name = "Время начала мероприятия")]
     [Required]
     [TimeConstraint(
-        Min = "08:00",
-        Max = "20:00")]
+        MinTime = "08:00",
+        MaxTime = "20:00")]
     public TimeOnly? EventStartTime { get; set; }
 
     [Display(Name = "Время окончания мероприятия")]
     [Required]
     [TimeConstraint(
-        Min = "08:00",
-        Max = "22:00",
+        MinTime = "08:00",
+        MaxTime = "22:00",
         DependsOnField = nameof(EventStartTime),
         Dependency = DependencyRule.NotLessThan)]
     public TimeOnly? EventEndTime { get; set; }
@@ -153,9 +153,9 @@ public class ApplicationDocument : BaseDocument
 
     [Display(Name = "Планируемый бюджет")]
     [Required]
-    [NumberRangeConstraint(
-        Min = 0,
-        Max = 100000,
+    [NumberRangeConstraintAtribute(
+        MinValue = 0,
+        MaxValue = 100000,
         AllowFloats = false)]
     public NumberRange? BudgetRange { get; set; }
 
