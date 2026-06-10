@@ -4,6 +4,6 @@
     {
         None,
         NotMoreThan,
-        NotMoreLess
+        NotLessThan
     }
 }

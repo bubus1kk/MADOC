@@ -115,7 +115,7 @@ namespace MADOC.Domain.Validation.Attributes
                 return new ValidationResult($"Текущее знаение должно быть не больше, чем  значение {DependsOnField}");
             }
 
-            if (Dependency == DependencyRule.NotMoreThan && currentValue < otherValue)
+            if (Dependency == DependencyRule.NotLessThan && currentValue < otherValue)
             {
                 return new ValidationResult($"Текущее знаение должно быть не меньше, чем значение {DependsOnField}");
             }
