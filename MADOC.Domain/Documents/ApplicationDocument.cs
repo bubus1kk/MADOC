@@ -103,8 +103,8 @@ public class ApplicationDocument : BaseDocument
     [Display(Name = "Дата подачи заявления")]
     [Required]
     [DateConstraint(
-        MinDate = "2026-01-01",
-        MaxDate = "2030-12-31")]
+        MinDate = "01-01-2026",
+        MaxDate = "31-12-2030")]
     public DateOnly? ApplicationDate { get; set; }
 
     [Display(Name = "Дата начала мероприятия")]

@@ -11,13 +11,19 @@ public class TimeRangeConstraintAttribute : ValidationAttribute
         ValidationContext validationContext)
     {
         if (value is null)
+        {
             return ValidationResult.Success;
+        }
 
         if (value is not TimeRange range)
+        {
             return new ValidationResult("Значение должно быть типа TimeRange.");
+        }
 
         if (range.From > range.To)
+        {
             return new ValidationResult("Время начала диапазона не должно быть позже времени окончания.");
+        }
 
         return ValidationResult.Success;
     }

@@ -11,13 +11,19 @@ public class DateRangeConstraintAttribute : ValidationAttribute
         ValidationContext validationContext)
     {
         if (value is null)
+        {
             return ValidationResult.Success;
+        }
 
         if (value is not DateRange range)
+        {
             return new ValidationResult("Значение должно быть типа DateRange.");
+        }
 
         if (range.From > range.To)
+        {
             return new ValidationResult("Дата начала диапазона не должна быть позже даты окончания.");
+        }
 
         return ValidationResult.Success;
     }
