@@ -34,7 +34,7 @@ namespace MADOC.Domain.Validation.ListDependencies
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            if (value == null)
+            if (value is null)
             {
                 return ValidationResult.Success;
             }
@@ -50,7 +50,7 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             var parentProperty = documentType.GetProperty(DependsOnField, BindingFlags.Instance | BindingFlags.Public);
 
-            if (parentProperty == null)
+            if (parentProperty is null)
             {
                 return new ValidationResult($"Поле {DependsOnField} не найдено");
             }

@@ -16,7 +16,7 @@ namespace MADOC.Domain.Validation.Attributes
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            if (value == null)
+            if (value is null)
             {
                 return ValidationResult.Success;
             }
@@ -98,7 +98,7 @@ namespace MADOC.Domain.Validation.Attributes
 
             var dependentProperty = objectType.GetProperty(DependsOnField, BindingFlags.Instance | BindingFlags.Public);
 
-            if (dependentProperty == null)
+            if (dependentProperty is null)
             {
                 return new ValidationResult($"Сравниваемое поле {DependsOnField} не найдено");
             }
