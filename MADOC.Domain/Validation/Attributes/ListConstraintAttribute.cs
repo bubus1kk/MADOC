@@ -15,20 +15,25 @@ public class ListConstraintAttribute : ValidationAttribute
         AllowedValues = allowedValues;
     }
 
-    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)// Проверяем, что значение является строкой и входит в список допустимых значений
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         if (value is null)
+        {
             return ValidationResult.Success;
+        }
 
-        var text = value.ToString();// Преобразуем значение в строку для проверки
+        var currentValue = value.ToString();
 
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrWhiteSpace(currentValue))
+        {
             return ValidationResult.Success;
+        }
 
-        if (!AllowedValues.Contains(text))
+        if (!AllowedValues.Contains(currentValue))
         {
             return new ValidationResult(
-                $"Значение '{text}' недопустимо. Допустимые значения: {string.Join(", ", AllowedValues)}.");
+                $"Значение \"{currentValue}\" недопустимо. " +
+                $"Допустимые значения: {string.Join(", ", AllowedValues)}.");
         }
 
         return ValidationResult.Success;
