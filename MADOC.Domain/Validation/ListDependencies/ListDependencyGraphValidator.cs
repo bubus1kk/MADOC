@@ -132,7 +132,7 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             if (visited.Contains(node))
             {
-                return true;
+                return false;
             }
 
             visited.Add(node);
