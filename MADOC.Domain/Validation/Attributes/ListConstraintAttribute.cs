@@ -5,9 +5,9 @@ namespace MADOC.Domain.Validation.Attributes;
 [AttributeUsage(AttributeTargets.Property)]
 public class ListConstraintAttribute : ValidationAttribute
 {
-    public IReadOnlyList<string> AllowedValues { get; }
+    public IReadOnlyList<string> AllowedValues { get; }// Список допустимых значений для поля
 
-    public ListConstraintAttribute(params string[] allowedValues)
+    public ListConstraintAttribute(params string[] allowedValues)// Конструктор атрибута, принимающий список допустимых значений
     {
         if (allowedValues.Length == 0)
         {
@@ -16,7 +16,7 @@ public class ListConstraintAttribute : ValidationAttribute
                 nameof(allowedValues));
         }
 
-        AllowedValues = allowedValues;
+        AllowedValues = allowedValues;// Инициализация свойства AllowedValues
     }
 
     protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
