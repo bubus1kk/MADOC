@@ -10,7 +10,11 @@ public class ListConstraintAttribute : ValidationAttribute
     public ListConstraintAttribute(params string[] allowedValues)
     {
         if (allowedValues.Length == 0)
-            throw new ArgumentException("Список допустимых значений не может быть пустым.", nameof(allowedValues));
+        {
+            throw new ArgumentException(
+                "Список допустимых значений не может быть пустым.",
+                nameof(allowedValues));
+        }
 
         AllowedValues = allowedValues;
     }

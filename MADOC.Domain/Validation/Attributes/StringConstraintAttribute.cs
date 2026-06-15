@@ -14,24 +14,39 @@ public class StringConstraintAttribute : ValidationAttribute
     protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         if (value is null)
+        {
             return ValidationResult.Success;
+        }
+
         if (value is not string text)
+        {
             return new ValidationResult("Значение должно быть строкой.");
+        }
 
         if (text.Length > MaxLength)
+        {
             return new ValidationResult($"Длина строки не должна быть больше {MaxLength} символов.");
+        }
 
         if (!IsMultiline && (text.Contains('\n') || text.Contains('\r')))
+        {
             return new ValidationResult("Многострочный ввод запрещён.");
+        }
 
         if (!AllowSpecialChars && text.Any(ch => !char.IsLetterOrDigit(ch) && !char.IsWhiteSpace(ch)))
+        {
             return new ValidationResult("Специальные символы запрещены.");
+        }
 
         if (Alphabet == AllowedAlphabet.LatinOnly && text.Any(ch => char.IsLetter(ch) && !IsLatinLetter(ch)))
+        {
             return new ValidationResult("Разрешены только латинские буквы.");
+        }
 
         if (Alphabet == AllowedAlphabet.CyrillicOnly && text.Any(ch => char.IsLetter(ch) && !IsCyrillicLetter(ch)))
+        {
             return new ValidationResult("Разрешены только кириллические буквы.");
+        }
 
         return ValidationResult.Success;
     }
