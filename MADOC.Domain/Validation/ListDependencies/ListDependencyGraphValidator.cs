@@ -42,7 +42,7 @@ namespace MADOC.Domain.Validation.ListDependencies
                     if (!propertiesByName.TryGetValue(dependency.DependsOnField, out var parentProperty))
                     {
                         validationResults.Add(new ValidationResult($"Родительское поле {dependency.DependsOnField} для " +
-                            $"поля {property.Name}"));
+                            $"поля {property.Name} не существует"));
 
                         continue;
                     }
@@ -67,7 +67,8 @@ namespace MADOC.Domain.Validation.ListDependencies
                         {
                             if (!childListConstraint.AllowedValues.Contains(value))
                             {
-                                validationResults.Add(new ValidationResult($"Значение {value} поля {property.Name} не найдено в списке допустимых значений"));
+                                validationResults.Add(new ValidationResult($"Значение {value} поля {property.Name} не найдено " +
+                                    $"в списке допустимых значений"));
                             }
                         }
                     }
