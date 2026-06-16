@@ -8,11 +8,7 @@ public static class ValidationTestHelper
     {
         var results = new List<ValidationResult>();
 
-        Validator.TryValidateObject(
-            model,
-            new ValidationContext(model),
-            results,
-            validateAllProperties: true);
+        Validator.TryValidateObject(model, new ValidationContext(model),results, validateAllProperties: true);
 
         return results;
     }
