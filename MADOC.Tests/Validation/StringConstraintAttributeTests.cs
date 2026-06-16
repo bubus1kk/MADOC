@@ -1,6 +1,6 @@
 using MADOC.Domain.Validation.Attributes;
 using MADOC.Domain.Validation.Enums;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MADOC.Tests.Domain;
 
 namespace MADOC.Tests.Validation;
 
@@ -51,7 +51,7 @@ public class StringConstraintAttributeTests
             Name = "Иванов Иван"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(0, results.Count);
     }
@@ -64,7 +64,7 @@ public class StringConstraintAttributeTests
             Name = "Ivan Иван"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }
@@ -77,7 +77,7 @@ public class StringConstraintAttributeTests
             Name = "Иванов Иван Иванович Петрович"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }
@@ -90,7 +90,7 @@ public class StringConstraintAttributeTests
             Name = "Иванов Иван!"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }
@@ -103,7 +103,7 @@ public class StringConstraintAttributeTests
             Name = "Иванов\nИван"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }
@@ -116,7 +116,7 @@ public class StringConstraintAttributeTests
             Login = "Ivanov"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(0, results.Count);
     }
@@ -129,7 +129,7 @@ public class StringConstraintAttributeTests
             Login = "Ivanов"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }
@@ -142,7 +142,7 @@ public class StringConstraintAttributeTests
             Text = "Первая строка\nВторая строка"
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(0, results.Count);
     }
@@ -155,7 +155,7 @@ public class StringConstraintAttributeTests
             Name = null!
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(0, results.Count);
     }
@@ -168,7 +168,7 @@ public class StringConstraintAttributeTests
             Value = 123
         };
 
-        var results = ValidationTest.ValidateObject(document);
+        var results = ValidationTestHelper.ValidateObject(document);
 
         Assert.AreEqual(1, results.Count);
     }

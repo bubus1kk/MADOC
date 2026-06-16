@@ -4,7 +4,7 @@ using MADOC.Domain.Ranges;
 namespace MADOC.Domain.Validation.Attributes
 {
     [AttributeUsage(AttributeTargets.Property)]
-    public class NumberRangeConstraintAtribute : ValidationAttribute
+    public class NumberRangeConstraintAttribute : ValidationAttribute
     {
         public double MinValue { get; set; } = double.MinValue;
         public double MaxValue { get; set; } = double.MaxValue;
@@ -49,7 +49,7 @@ namespace MADOC.Domain.Validation.Attributes
 
         private static bool IsWholeNumber(double value)
         {
-            return value % 1 == 0;
+            return Math.Truncate(value) == value;
         }
     }
 }
