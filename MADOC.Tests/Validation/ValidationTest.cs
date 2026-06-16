@@ -1,21 +1,24 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MADOC.Tests.Validation;
+namespace MADOC.Tests.Domain;
 
-public static class ValidationTest
+public static class ValidationTestHelper
 {
     public static List<ValidationResult> ValidateObject(object model)
     {
-        var results = new List<ValidationResult>();// создание списка для хранения результатов валидации
-
-        var context = new ValidationContext(model);// создание контекста валидации для объекта модели
+        var results = new List<ValidationResult>();
 
         Validator.TryValidateObject(
             model,
-            context,
+            new ValidationContext(model),
             results,
-            validateAllProperties: true);// проверка всех свойств объекта
+            validateAllProperties: true);
 
         return results;
+    }
+
+    public static bool IsValid(object model)
+    {
+        return ValidateObject(model).Count == 0;
     }
 }
