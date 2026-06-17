@@ -52,7 +52,7 @@ namespace MADOC.Domain.Validation.ListDependencies
                     if (parentsListConstraint is null)
                     {
                         validationResults.Add(new ValidationResult($"Родительское поле {dependency.DependsOnField} для поля " +
-                            $"{property.Name} не являктся выпадающим списком"));
+                            $"{property.Name} не является выпадающим списком"));
                     }
 
                     else if (!parentsListConstraint.AllowedValues.Contains(dependency.ParentFieldValue))
