@@ -153,7 +153,7 @@ public class ApplicationDocument : BaseDocument
 
     [Display(Name = "Планируемый бюджет")]
     [Required]
-    [NumberRangeConstraintAtribute(
+    [NumberRangeConstraint(
         MinValue = 0,
         MaxValue = 100000,
         AllowFloats = false)]
