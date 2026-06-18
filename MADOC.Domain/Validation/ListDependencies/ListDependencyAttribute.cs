@@ -3,33 +3,34 @@ using System.Reflection;
 
 namespace MADOC.Domain.Validation.ListDependencies
 {
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public class ListDependencyAttribute : ValidationAttribute
     {
-        public string DependsOnField { get; }
-        public string ParentFieldValue { get; }
-        public IReadOnlyList<string> AllowedFieldValues { get; }
+        public IReadOnlyList<string> DependsOnFields { get; }
 
-        public ListDependencyAttribute(string dependsOnField, string parentFieldValue, params string[] allowedFieldValues)
+        public ListDependencyAttribute(params string[] dependsOnFields)
         {
-            if (string.IsNullOrWhiteSpace(dependsOnField))
+            if (dependsOnFields is null || dependsOnFields.Length == 0)
             {
-                throw new ArgumentException("Имя родительсокго поля не может быть пустым", nameof(dependsOnField));
+                throw new ArgumentException("должно быть указано хотя бы одно родительское поле", nameof(dependsOnFields));
             }
 
-            if (string.IsNullOrWhiteSpace(parentFieldValue))
+            var uniqueFields = new HashSet<string>();
+
+            foreach (var dependsOnField in dependsOnFields)
             {
-                throw new ArgumentException("Значение родительского поля не может быть пустым", nameof(parentFieldValue));
+                if (string.IsNullOrWhiteSpace(dependsOnField))
+                {
+                    throw new ArgumentException("имя родительского поля не может быть пустым", nameof(dependsOnFields));
+                }
+
+                if (!uniqueFields.Add(dependsOnField))
+                {
+                    throw new ArgumentException($"родительское поле {dependsOnField} указано несколько раз", nameof(dependsOnFields));
+                }
             }
 
-            if (allowedFieldValues.Length == 0)
-            {
-                throw new ArgumentException("Список допустимых значений не может быть пустым", nameof(allowedFieldValues));
-            }
-
-            this.DependsOnField = dependsOnField;
-            this.ParentFieldValue = parentFieldValue;
-            this.AllowedFieldValues = allowedFieldValues;
+            DependsOnFields = dependsOnFields;
         }
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
@@ -46,35 +47,63 @@ namespace MADOC.Domain.Validation.ListDependencies
                 return ValidationResult.Success;
             }
 
-            var documentType = validationContext.ObjectInstance.GetType();
+            var childFieldName = validationContext.MemberName;
 
-            var parentProperty = documentType.GetProperty(DependsOnField, BindingFlags.Instance | BindingFlags.Public);
-
-            if (parentProperty is null)
+            if (string.IsNullOrWhiteSpace(childFieldName))
             {
-                return new ValidationResult($"Поле {DependsOnField} не найдено");
+                return new ValidationResult("Не удалось определить имя зависимого поля.");
             }
 
-            var parentFieldValue = parentProperty.GetValue(validationContext.ObjectInstance)?.ToString();
+            var document = validationContext.ObjectInstance;
 
-            if (string.IsNullOrWhiteSpace(parentFieldValue))
+            if (document is not IListDependencySchemaProvider schemaProvider)
             {
-                return ValidationResult.Success;
+                return new ValidationResult($"документ {document.GetType().Name} не предоставляет схему зависимостей списков");
             }
 
-            if (parentFieldValue != ParentFieldValue)
+            var documentType = document.GetType();
+
+            var parentValues = new Dictionary<string, string>();
+
+            foreach (var parentFieldName in DependsOnFields)
             {
-                return ValidationResult.Success;
+                var parentProperty = documentType.GetProperty(parentFieldName, BindingFlags.Instance | BindingFlags.Public);
+
+                if (parentProperty is null)
+                {
+                    return new ValidationResult($"родительское поле {parentFieldName} не найдено");
+                }
+
+                var parentValue = parentProperty.GetValue(document)?.ToString();
+
+                if (string.IsNullOrWhiteSpace(parentValue))
+                {
+                    return ValidationResult.Success;
+                }
+
+                parentValues.Add(parentFieldName, parentValue);
             }
 
-            if (!AllowedFieldValues.Contains(currentValue))
-            {
-                var fieldName = validationContext.DisplayName;
+            var schema = schemaProvider.GetListDependencySchema();
 
-                return new ValidationResult($"Значение {currentValue} недопустимо для поля {fieldName}");
+            if (schema is null)
+            {
+                return new ValidationResult($"документ {documentType.Name} вернул пустую схему зависимостей списков");
             }
 
-            return ValidationResult.Success;
+            var allowedValues = schema.GetAllowedValues(childFieldName, parentValues);
+
+            foreach (var allowedValue in allowedValues)
+            {
+                if (allowedValue == currentValue)
+                {
+                    return ValidationResult.Success;
+                }
+            }
+
+            var fieldName = validationContext.DisplayName;
+
+            return new ValidationResult($"значение {currentValue}недопустимо для поля {fieldName} при текущих значениях родительских полей");
         }
     }
 }
