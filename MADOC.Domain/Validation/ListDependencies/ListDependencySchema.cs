@@ -16,26 +16,26 @@ namespace MADOC.Domain.Validation.ListDependencies
         }
 
         public void AddRule(
-            string childField,
-            string parentField,
-            string parentValue,
+            string childFieldName,
+            string parentFieldName,
+            string parentFieldValue,
             params string[] allowedChildValues)
         {
             var rule = new ListDependencyRule(
-                childField,
-                parentField,
-                parentValue,
+                childFieldName,
+                parentFieldName,
+                parentFieldValue,
                 allowedChildValues);
 
             rules.Add(rule);
         }
 
-        public bool HasRulesForConnection(string childField, string parentField)//проверяет, есть ли правила, связывающие childField и parentField
+        public bool HasRulesForConnection(string childFieldName, string parentFieldName)//проверяет, есть ли правила, связывающие childFieldName и parentFieldName
         {
             foreach (var rule in rules)
             {
-                if (rule.ChildField == childField &&
-                    rule.ParentField == parentField)
+                if (rule.ChildFieldName == childFieldName &&
+                    rule.ParentFieldName == parentFieldName)
                 {
                     return true;
                 }
@@ -44,33 +44,33 @@ namespace MADOC.Domain.Validation.ListDependencies
             return false;
         }
 
-        public IReadOnlyList<string> GetAllowedValues(string childField,IReadOnlyDictionary<string, string> parentValues)
+        public IReadOnlyList<string> GetAllowedValues(string childFieldName,IReadOnlyDictionary<string, string> parentFieldValues)
         {
-            if (string.IsNullOrWhiteSpace(childField))
+            if (string.IsNullOrWhiteSpace(childFieldName))
             {
                 throw new ArgumentException(
                     "Имя зависимого поля не может быть пустым.",
-                    nameof(childField));
+                    nameof(childFieldName));
             }
 
-            ArgumentNullException.ThrowIfNull(parentValues);
+            ArgumentNullException.ThrowIfNull(parentFieldValues);
 
-            if (parentValues.Count == 0)
+            if (parentFieldValues.Count == 0)
             {
                 return Array.Empty<string>();
             }
 
             List<string>? result = null;
 
-            foreach (var parentValuePair in parentValues)
+            foreach (var parentFieldValuePair in parentFieldValues)
             {
-                var parentField = parentValuePair.Key;
-                var parentValue = parentValuePair.Value;
+                var parentFieldName = parentFieldValuePair.Key;
+                var parentFieldValue = parentFieldValuePair.Value;
 
                 var allowedForCurrentParent = GetAllowedValuesForOneParent(
-                    childField,
-                    parentField,
-                    parentValue);
+                    childFieldName,
+                    parentFieldName,
+                    parentFieldValue);
 
                 if (allowedForCurrentParent.Count == 0)
                 {
@@ -96,31 +96,31 @@ namespace MADOC.Domain.Validation.ListDependencies
         }
 
         private List<string> GetAllowedValuesForOneParent(
-            string childField,
-            string parentField,
-            string parentValue)
+            string childFieldName,
+            string parentFieldName,
+            string parentFieldValue)
         {
             var result = new List<string>();
             var uniqueValues = new HashSet<string>();
 
             foreach (var rule in rules)
             {
-                if (rule.ChildField != childField)
+                if (rule.ChildFieldName != childFieldName)
                 {
                     continue;
                 }
 
-                if (rule.ParentField != parentField)
+                if (rule.ParentFieldName != parentFieldName)
                 {
                     continue;
                 }
 
-                if (rule.ParentValue != parentValue)
+                if (rule.ParentFieldValue != parentFieldValue)
                 {
                     continue;
                 }
 
-                foreach (var allowedValue in rule.AllowedChildValues)
+                foreach (var allowedValue in rule.AllowedChildFieldValues)
                 {
                     if (uniqueValues.Add(allowedValue))
                     {
