@@ -1,226 +1,221 @@
 using MADOC.Domain.Validation.Attributes;
 using MADOC.Domain.Validation.ListDependencies;
+using MADOC.Tests.Domain;
 
 namespace MADOC.Tests.Domain.ListDependencies;
 
 [TestClass]
-public class ListFieldOptionResolverTests
+public class ListDependencyAttributeTests
 {
     [TestMethod]
-    public void GetAvailableValues_Should_Return_All_Values_For_Independent_List_Field()
+    public void Should_Pass_When_Value_Is_Allowed_By_One_Parent()
     {
-        var document = new TestRoomBookingDocument();
-
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.EventFormat));
-
-        CollectionAssert.AreEqual(new List<string> { "Лекция", "Практика", "Конференция" },values.ToList());
-    }
-
-    [TestMethod]
-    public void GetAvailableValues_Should_Return_Values_By_Parent_Field()
-    {
-        var document = new TestRoomBookingDocument
+        var model = new OneParentDocument
         {
-            EventFormat = "Лекция"
+            Parent = "A",
+            Child = "A1"
         };
 
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.RoomType));
-
-        CollectionAssert.AreEqual(
-            new List<string> { "Лекционная", "Актовый зал" },
-            values.ToList());
+        Assert.IsTrue(ValidationTestHelper.IsValid(model));
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Return_Empty_List_When_Parent_Value_Is_Empty()
+    public void Should_Fail_When_Value_Is_Not_Allowed_By_One_Parent()
     {
-        var document = new TestRoomBookingDocument
+        var model = new OneParentDocument
         {
-            EventFormat = ""
+            Parent = "A",
+            Child = "B1"
         };
 
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.RoomType));
-
-        Assert.AreEqual(0, values.Count);
+        Assert.IsFalse(ValidationTestHelper.IsValid(model));
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Return_Empty_List_When_No_Rule_Matches_Parent_Value()
+    public void Should_Pass_When_Parent_Value_Is_Empty()
     {
-        var document = new TestRoomBookingDocument
+        var model = new OneParentDocument
         {
-            EventFormat = "Конференция"
+            Parent = "",
+            Child = "B1"
         };
 
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.RoomType));
-
-        Assert.AreEqual(0, values.Count);
+        Assert.IsTrue(ValidationTestHelper.IsValid(model));
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Return_Intersection_When_Field_Has_Two_Parents()
+    public void Should_Pass_When_Current_Value_Is_Empty()
     {
-        var document = new TestRoomBookingDocument
+        var model = new OneParentDocument
+        {
+            Parent = "A",
+            Child = ""
+        };
+
+        Assert.IsTrue(ValidationTestHelper.IsValid(model));
+    }
+
+    [TestMethod]
+    public void Should_Pass_When_Value_Is_Allowed_By_Two_Parents_Intersection()
+    {
+        var model = new TwoParentsDocument
         {
             Building = "Учебный",
-            RoomType = "Компьютерный класс"
+            RoomType = "Компьютерный класс",
+            Room = "Компьютерный класс 1"
         };
 
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.Room));
-
-        CollectionAssert.AreEqual(
-            new List<string> { "Компьютерный класс 210", "Компьютерный класс 212" },
-            values.ToList());
+        Assert.IsTrue(ValidationTestHelper.IsValid(model));
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Return_Empty_List_When_Two_Parents_Have_No_Intersection()
+    public void Should_Fail_When_Value_Is_Allowed_By_First_Parent_But_Not_By_Second_Parent()
     {
-        var document = new TestRoomBookingDocument
+        var model = new TwoParentsDocument
         {
-            Building = "Главный",
-            RoomType = "Компьютерный класс"
+            Building = "Учебный",
+            RoomType = "Компьютерный класс",
+            Room = "Лаборатория 1"
         };
 
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(TestRoomBookingDocument.Room));
-
-        Assert.AreEqual(0, values.Count);
+        Assert.IsFalse(ValidationTestHelper.IsValid(model));
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Throw_When_Field_Does_Not_Exist()
+    public void Should_Fail_When_Document_Does_Not_Provide_Dependency_Schema()
     {
-        var document = new TestRoomBookingDocument();
+        var model = new DocumentWithoutSchema
+        {
+            Parent = "A",
+            Child = "A1"
+        };
 
-        var resolver = new ListFieldOptionResolver();
+        Assert.IsFalse(ValidationTestHelper.IsValid(model));
+    }
 
+    [TestMethod]
+    public void Constructor_Should_Throw_When_Parents_Are_Not_Provided()
+    {
         Assert.ThrowsExactly<ArgumentException>(() =>
         {
-            resolver.GetAvailableValues(document, "MissingField");
+            _ = new ListDependencyAttribute();
         });
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Throw_When_Field_Is_Not_List()
+    public void Constructor_Should_Throw_When_Parent_Name_Is_Empty()
     {
-        var document = new NonListFieldDocument();
-
-        var resolver = new ListFieldOptionResolver();
-
-        Assert.ThrowsExactly<InvalidOperationException>(() =>
-        {
-            resolver.GetAvailableValues(
-                document,
-                nameof(NonListFieldDocument.Name));
-        });
-    }
-
-    [TestMethod]
-    public void GetAvailableValues_Should_Preserve_Order_From_ListConstraint()
-    {
-        var document = new OrderDocument
-        {
-            Parent = "A"
-        };
-
-        var resolver = new ListFieldOptionResolver();
-
-        var values = resolver.GetAvailableValues(
-            document,
-            nameof(OrderDocument.Child));
-
-        CollectionAssert.AreEqual(
-            new List<string> { "B", "C" },
-            values.ToList());
-    }
-
-    [TestMethod]
-    public void GetAvailableValues_Should_Throw_When_Document_Is_Null()
-    {
-        var resolver = new ListFieldOptionResolver();
-
-        Assert.ThrowsExactly<ArgumentNullException>(() =>
-        {
-            resolver.GetAvailableValues(null!, "AnyField");
-        });
-    }
-
-    [TestMethod]
-    public void GetAvailableValues_Should_Throw_When_FieldName_Is_Empty()
-    {
-        var document = new TestRoomBookingDocument();
-
-        var resolver = new ListFieldOptionResolver();
-
         Assert.ThrowsExactly<ArgumentException>(() =>
         {
-            resolver.GetAvailableValues(document, "");
+            _ = new ListDependencyAttribute("");
         });
     }
 
-    private class TestRoomBookingDocument
+    [TestMethod]
+    public void Constructor_Should_Throw_When_Parent_Name_Is_Duplicated()
     {
-        [ListConstraint("Лекция", "Практика", "Конференция")]
-        public string EventFormat { get; set; } = string.Empty;
+        Assert.ThrowsExactly<ArgumentException>(() =>
+        {
+            _ = new ListDependencyAttribute("Parent", "Parent");
+        });
+    }
+
+    public class OneParentDocument : IListDependencySchemaProvider
+    {
+        private static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+
+        [ListConstraint("A", "B")]
+        public string Parent { get; set; } = string.Empty;
+
+        [ListConstraint("A1", "A2", "B1", "B2")]
+        [ListDependency(nameof(Parent))]
+        public string Child { get; set; } = string.Empty;
+
+        public ListDependencySchema GetListDependencySchema()
+        {
+            return DependencySchema;
+        }
+
+        private static ListDependencySchema CreateDependencySchema()
+        {
+            var schema = new ListDependencySchema();
+
+            schema.AddRule(
+                nameof(Child),
+                nameof(Parent),
+                "A",
+                "A1",
+                "A2");
+
+            schema.AddRule(
+                nameof(Child),
+                nameof(Parent),
+                "B",
+                "B1",
+                "B2");
+
+            return schema;
+        }
+    }
+
+    public class TwoParentsDocument : IListDependencySchemaProvider
+    {
+        private static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
 
         [ListConstraint("Главный", "Учебный")]
         public string Building { get; set; } = string.Empty;
 
-        [ListConstraint("Лекционная", "Актовый зал", "Компьютерный класс", "Учебная")]
-        [ListDependency(nameof(EventFormat), "Лекция", "Лекционная", "Актовый зал")]
-        [ListDependency(nameof(EventFormat), "Практика", "Компьютерный класс", "Учебная")]
+        [ListConstraint("Компьютерный класс", "Лаборатория")]
         public string RoomType { get; set; } = string.Empty;
 
         [ListConstraint(
-            "Аудитория 101",
-            "Аудитория 201",
-            "Актовый зал 1",
-            "Компьютерный класс 210",
-            "Компьютерный класс 212")]
-        [ListDependency(nameof(Building), "Главный", "Аудитория 101", "Аудитория 201", "Актовый зал 1")]
-        [ListDependency(nameof(Building), "Учебный", "Компьютерный класс 210", "Компьютерный класс 212")]
-        [ListDependency(nameof(RoomType), "Лекционная", "Аудитория 101", "Аудитория 201")]
-        [ListDependency(nameof(RoomType), "Актовый зал", "Актовый зал 1")]
-        [ListDependency(nameof(RoomType), "Компьютерный класс", "Компьютерный класс 210", "Компьютерный класс 212")]
+            "Компьютерный класс 1",
+            "Компьютерный класс 2",
+            "Лаборатория 1")]
+        [ListDependency(nameof(Building), nameof(RoomType))]
         public string Room { get; set; } = string.Empty;
+
+        public ListDependencySchema GetListDependencySchema()
+        {
+            return DependencySchema;
+        }
+
+        private static ListDependencySchema CreateDependencySchema()
+        {
+            var schema = new ListDependencySchema();
+
+            schema.AddRule(
+                nameof(Room),
+                nameof(Building),
+                "Учебный",
+                "Компьютерный класс 1",
+                "Компьютерный класс 2",
+                "Лаборатория 1");
+
+            schema.AddRule(
+                nameof(Room),
+                nameof(RoomType),
+                "Компьютерный класс",
+                "Компьютерный класс 1",
+                "Компьютерный класс 2");
+
+            schema.AddRule(
+                nameof(Room),
+                nameof(RoomType),
+                "Лаборатория",
+                "Лаборатория 1");
+
+            return schema;
+        }
     }
 
-    private class NonListFieldDocument
-    {
-        public string Name { get; set; } = string.Empty;
-    }
-
-    private class OrderDocument
+    public class DocumentWithoutSchema
     {
         [ListConstraint("A")]
         public string Parent { get; set; } = string.Empty;
 
-        [ListConstraint("A", "B", "C", "D")]
-        [ListDependency(nameof(Parent), "A", "C", "B")]
+        [ListConstraint("A1")]
+        [ListDependency(nameof(Parent))]
         public string Child { get; set; } = string.Empty;
     }
 }
