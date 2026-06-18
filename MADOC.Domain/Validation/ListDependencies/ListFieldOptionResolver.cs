@@ -1,11 +1,13 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using MADOC.Domain.Validation.Attributes;
 
 namespace MADOC.Domain.Validation.ListDependencies
 {
     public class ListFieldOptionResolver
     {
-        public IReadOnlyList<string> GetAvailableValues(object document, string fieldName)
+        public IReadOnlyList<string> GetAvailableValues(object document,string fieldName)
         {
             ArgumentNullException.ThrowIfNull(document);
 
@@ -16,11 +18,9 @@ namespace MADOC.Domain.Validation.ListDependencies
                     nameof(fieldName));
             }
 
-            var documentType = document.GetType();// Получаем тип поля, для которого нужно определить доступные значения
+            var documentType = document.GetType();
 
-            var fieldProperty = documentType.GetProperty(
-                fieldName,
-                BindingFlags.Instance | BindingFlags.Public);// Ищем свойство с указанным именем
+            var fieldProperty = documentType.GetProperty(fieldName,BindingFlags.Instance | BindingFlags.Public);
 
             if (fieldProperty is null)
             {
@@ -29,7 +29,7 @@ namespace MADOC.Domain.Validation.ListDependencies
                     nameof(fieldName));
             }
 
-            var listConstraint = fieldProperty.GetCustomAttribute<ListConstraintAttribute>();// Получаем атрибут ListConstraintAttribute, если он есть
+            var listConstraint = fieldProperty.GetCustomAttribute<ListConstraintAttribute>();
 
             if (listConstraint is null)
             {
@@ -38,29 +38,26 @@ namespace MADOC.Domain.Validation.ListDependencies
                     $"Для него должен быть указан ListConstraintAttribute.");
             }
 
-            var allValues = listConstraint.AllowedValues.ToList();// Получаем все возможные значения из атрибута ListConstraintAttribute
+            var allValues = new List<string>(listConstraint.AllowedValues);
 
-            var dependencies = fieldProperty
-                .GetCustomAttributes<ListDependencyAttribute>()
-                .ToList();// Получаем все атрибуты ListDependencyAttribute, которые определяют зависимости для данного поля
+            var dependency = fieldProperty.GetCustomAttribute<ListDependencyAttribute>();
 
-            if (dependencies.Count == 0)
+            if (dependency is null)
             {
                 return allValues;
-            }// Если зависимостей нет, возвращаем все возможные значения
+            }
 
-            var allowedByParentGroups = new List<HashSet<string>>();// Создаем список, который будет содержать множества допустимых значений для каждого родительского поля
-
-            var dependenciesGroupedByParent = dependencies
-                .GroupBy(dependency => dependency.DependsOnField);// Группируем зависимости по родительскому полю
-
-            foreach (var parentGroup in dependenciesGroupedByParent)// Проходим по каждой группе зависимостей, сгруппированных по родительскому полю
+            if (document is not IListDependencySchemaProvider schemaProvider)
             {
-                var parentFieldName = parentGroup.Key;
+                throw new InvalidOperationException(
+                    $"Документ \"{documentType.Name}\" не предоставляет схему зависимостей списков.");
+            }
 
-                var parentProperty = documentType.GetProperty(
-                    parentFieldName,
-                    BindingFlags.Instance | BindingFlags.Public);
+            var parentValues = new Dictionary<string, string>();
+
+            foreach (var parentFieldName in dependency.DependsOnFields)
+            {
+                var parentProperty = documentType.GetProperty(parentFieldName,BindingFlags.Instance | BindingFlags.Public);
 
                 if (parentProperty is null)
                 {
@@ -72,32 +69,44 @@ namespace MADOC.Domain.Validation.ListDependencies
                     .GetValue(document)?
                     .ToString();
 
-                if (string.IsNullOrWhiteSpace(parentValue))// Если значение родительского поля пустое, возвращаем пустой список доступных значений
+                if (string.IsNullOrWhiteSpace(parentValue))
                 {
                     return Array.Empty<string>();
                 }
 
-                var matchingRules = parentGroup
-                    .Where(rule => rule.ParentFieldValue == parentValue)
-                    .ToList();// Находим все правила, которые соответствуют текущему значению родительского поля
-
-                if (matchingRules.Count == 0)
-                {
-                    return Array.Empty<string>();
-                }
-
-                var allowedForCurrentParent = matchingRules
-                    .SelectMany(rule => rule.AllowedFieldValues)
-                    .ToHashSet();// Получаем множество допустимых значений для текущего родительского поля
-
-                allowedByParentGroups.Add(allowedForCurrentParent);// Добавляем множество допустимых значений в список
+                parentValues.Add(parentFieldName, parentValue);
             }
 
-            var availableValues = allValues
-                .Where(value => allowedByParentGroups.All(group => group.Contains(value)))
-                .ToList();// Находим значения, которые присутствуют во всех множествах допустимых значений для каждого родительского поля
+            var schema = schemaProvider.GetListDependencySchema();
 
-            return availableValues;// Возвращаем итоговый список доступных значений для данного поля, учитывая все зависимости
+            if (schema is null)
+            {
+                throw new InvalidOperationException(
+                    $"Документ \"{documentType.Name}\" вернул пустую схему зависимостей списков.");
+            }
+
+            var allowedValues = schema.GetAllowedValues(fieldName,parentValues);
+
+            return FilterByListConstraintOrder(
+                allValues,
+                allowedValues);
+        }
+
+        private static IReadOnlyList<string> FilterByListConstraintOrder(IReadOnlyList<string> allValues,
+            IReadOnlyList<string> allowedValues)
+        {
+            var allowedValuesSet = new HashSet<string>(allowedValues);
+            var result = new List<string>();
+
+            foreach (var value in allValues)
+            {
+                if (allowedValuesSet.Contains(value))
+                {
+                    result.Add(value);
+                }
+            }
+
+            return result;
         }
     }
 }
