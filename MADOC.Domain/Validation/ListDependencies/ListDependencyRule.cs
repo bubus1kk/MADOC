@@ -1,55 +1,76 @@
-﻿namespace MADOC.Domain.Validation.ListDependencies
+﻿using System;
+using System.Collections.Generic;
+using MADOC.Domain.Validation.Lists;
+
+namespace MADOC.Domain.Validation.ListDependencies
 {
     public class ListDependencyRule
     {
-        public string ChildFieldName { get; }
-        public string ParentFieldName { get; }
-        public string ParentFieldValue { get; }
-        public IReadOnlyList<string> AllowedChildFieldValues { get; }
+        public string ChildField { get; }
+        public string ParentField { get; }
+        public ListOptionKey ParentValueKey { get; }
+        public IReadOnlyList<ListOptionKey> AllowedChildValueKeys { get; }
 
-        public ListDependencyRule(string childFieldName, string parentFieldName, string ParentFieldValue,
-            params string[] allowedChildFieldValues)
+        public ListDependencyRule(
+            string childField,
+            string parentField,
+            ListOptionKey parentValueKey,
+            params ListOptionKey[] allowedChildValueKeys)
         {
-            if (string.IsNullOrWhiteSpace(childFieldName))
+            if (string.IsNullOrWhiteSpace(childField))
             {
-                throw new ArgumentException("Имя зависимого поля не может быть пустым", nameof(childFieldName));
+                throw new ArgumentException(
+                    "Имя зависимого поля не может быть пустым.",
+                    nameof(childField));
             }
 
-            if (string.IsNullOrWhiteSpace(parentFieldName))
+            if (string.IsNullOrWhiteSpace(parentField))
             {
-                throw new ArgumentException("Имя родительсого поля не может быть пустым", nameof(parentFieldName));
+                throw new ArgumentException(
+                    "Имя родительского поля не может быть пустым.",
+                    nameof(parentField));
             }
 
-            if (string.IsNullOrWhiteSpace(ParentFieldValue))
+            if (string.IsNullOrWhiteSpace(parentValueKey.Value))
             {
-                throw new ArgumentException("Значение родительсого поля не может быть пустым", nameof(ParentFieldValue));
+                throw new ArgumentException(
+                    "Ключ значения родительского поля не может быть пустым.",
+                    nameof(parentValueKey));
             }
 
-            if (allowedChildFieldValues.Length == 0 || allowedChildFieldValues is null)
+            if (allowedChildValueKeys is null || allowedChildValueKeys.Length == 0)
             {
-                throw new ArgumentException("Список значений зависимого поля не может быть " +
-                    "пустым", nameof(allowedChildFieldValues));
+                throw new ArgumentException(
+                    "Список разрешённых ключей зависимого поля не может быть пустым.",
+                    nameof(allowedChildValueKeys));
             }
 
-            var uniqueChildFieldAllowedValues = new HashSet<string>();
+            var uniqueKeys = new HashSet<ListOptionKey>();
+            var copiedKeys = new List<ListOptionKey>();
 
-            foreach (var value in allowedChildFieldValues)
+            foreach (var allowedChildValueKey in allowedChildValueKeys)
             {
-                if (string.IsNullOrWhiteSpace(value))
+                if (string.IsNullOrWhiteSpace(allowedChildValueKey.Value))
                 {
-                    throw new ArgumentException("Значение не может быть пустым", nameof(value));
+                    throw new ArgumentException(
+                        "Ключ разрешённого значения зависимого поля не может быть пустым.",
+                        nameof(allowedChildValueKeys));
                 }
 
-                if (!uniqueChildFieldAllowedValues.Add(value))
+                if (!uniqueKeys.Add(allowedChildValueKey))
                 {
-                    throw new ArgumentException($"Значение {value} указано несколько раз", nameof(value));
+                    throw new ArgumentException(
+                        $"Ключ \"{allowedChildValueKey}\" указан несколько раз.",
+                        nameof(allowedChildValueKeys));
                 }
+
+                copiedKeys.Add(allowedChildValueKey);
             }
 
-            this.ChildFieldName = childFieldName;
-            this.ParentFieldName = parentFieldName;
-            this.ParentFieldValue = ParentFieldValue;
-            this.AllowedChildFieldValues = allowedChildFieldValues;
+            ChildField = childField;
+            ParentField = parentField;
+            ParentValueKey = parentValueKey;
+            AllowedChildValueKeys = copiedKeys;
         }
     }
 }
