@@ -10,7 +10,7 @@
         public ListDependencyRule(string childFieldName, string parentFieldName, string ParentFieldValue,
             params string[] allowedChildFieldValues)
         {
-            if (string.IsNullOrWhiteSpace(ChildFieldName))
+            if (string.IsNullOrWhiteSpace(childFieldName))
             {
                 throw new ArgumentException("Имя зависимого поля не может быть пустым", nameof(childFieldName));
             }
