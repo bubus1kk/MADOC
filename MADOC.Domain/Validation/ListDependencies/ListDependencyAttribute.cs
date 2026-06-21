@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MADOC.Domain.Validation.Lists;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
 namespace MADOC.Domain.Validation.ListDependencies
@@ -40,18 +41,16 @@ namespace MADOC.Domain.Validation.ListDependencies
                 return ValidationResult.Success;
             }
 
-            var currentValue = value.ToString();
-
-            if (string.IsNullOrWhiteSpace(currentValue))
+            if (!ListOptionKeyConverter.TryConvert(value, out var currentValueKey))
             {
-                return ValidationResult.Success;
+                return new ValidationResult($"значение поля {validationContext.DisplayName} должно быть ключом варианта списка");
             }
 
             var childFieldName = validationContext.MemberName;
 
             if (string.IsNullOrWhiteSpace(childFieldName))
             {
-                return new ValidationResult("Не удалось определить имя зависимого поля.");
+                return new ValidationResult("не удалось определить имя зависимого поля");
             }
 
             var document = validationContext.ObjectInstance;
@@ -62,9 +61,8 @@ namespace MADOC.Domain.Validation.ListDependencies
             }
 
             var documentType = document.GetType();
-
-            var parentValues = new Dictionary<string, string>();
-
+            var parentValues = new Dictionary<string, ListOptionKey>();
+            
             foreach (var parentFieldName in DependsOnFields)
             {
                 var parentProperty = documentType.GetProperty(parentFieldName, BindingFlags.Instance | BindingFlags.Public);
@@ -74,14 +72,19 @@ namespace MADOC.Domain.Validation.ListDependencies
                     return new ValidationResult($"родительское поле {parentFieldName} не найдено");
                 }
 
-                var parentValue = parentProperty.GetValue(document)?.ToString();
+                var parentValue = parentProperty.GetValue(document);
 
-                if (string.IsNullOrWhiteSpace(parentValue))
+                if (parentValue is null)
                 {
                     return ValidationResult.Success;
                 }
 
-                parentValues.Add(parentFieldName, parentValue);
+                if (!ListOptionKeyConverter.TryConvert(parentValue, out var parentValueKey))
+                {
+                    return new ValidationResult($"значение родительского поля {parentFieldName} должно быть ключом варианта списка");
+                }
+
+                parentValues.Add(parentFieldName, parentValueKey);
             }
 
             var schema = schemaProvider.GetListDependencySchema();
@@ -95,15 +98,14 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             foreach (var allowedValue in allowedValues)
             {
-                if (allowedValue == currentValue)
+                if (allowedValue == currentValueKey)
                 {
                     return ValidationResult.Success;
                 }
             }
 
-            var fieldName = validationContext.DisplayName;
-
-            return new ValidationResult($"значение {currentValue}недопустимо для поля {fieldName} при текущих значениях родительских полей");
+            return new ValidationResult($"значение {currentValueKey} недопустимо для поля {validationContext.DisplayName} " +
+                $"при текущих значениях родительских полей");
         }
     }
 }

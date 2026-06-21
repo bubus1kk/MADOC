@@ -1,22 +1,49 @@
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using MADOC.Domain.Validation.Attributes;
 using MADOC.Domain.Validation.ListDependencies;
-using MADOC.Tests.Domain;
+using MADOC.Domain.Validation.Lists;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MADOC.Tests.Domain.ListDependencies;
 
 [TestClass]
 public class ListDependencyAttributeTests
 {
+    private static readonly ListOption ParentA = new(new ListOptionKey("test.parent.a"), "A");
+
+    private static readonly ListOption ParentB = new(new ListOptionKey("test.parent.b"), "B");
+
+    private static readonly ListOption ChildA1 = new(new ListOptionKey("test.child.a1"), "A1");
+
+    private static readonly ListOption ChildA2 = new(new ListOptionKey("test.child.a2"), "A2");
+
+    private static readonly ListOption ChildB1 = new(new ListOptionKey("test.child.b1"), "B1");
+
+    private static readonly ListOption MainBuilding = new(new ListOptionKey("test.building.main"), "Главный");
+
+    private static readonly ListOption EducationalBuilding = new(new ListOptionKey("test.building.educational"), "Учебный");
+
+    private static readonly ListOption LectureRoomType = new(new ListOptionKey("test.room_type.lecture"), "Лекционная");
+
+    private static readonly ListOption ComputerRoomType = new(new ListOptionKey("test.room_type.computer"), "Компьютерный класс");
+
+    private static readonly ListOption Auditorium = new(new ListOptionKey("test.room.auditorium"), "Аудитория 101");
+
+    private static readonly ListOption ComputerRoom1 = new(new ListOptionKey("test.room.computer_1"), "Компьютерный класс 1");
+
+    private static readonly ListOption ComputerRoom2 = new(new ListOptionKey("test.room.computer_2"), "Компьютерный класс 2");
+
     [TestMethod]
     public void Should_Pass_When_Value_Is_Allowed_By_One_Parent()
     {
         var model = new OneParentDocument
         {
-            Parent = "A",
-            Child = "A1"
+            Parent = ParentA.Key,
+            Child = ChildA1.Key
         };
 
-        Assert.IsTrue(ValidationTestHelper.IsValid(model));
+        Assert.IsTrue(IsValid(model));
     }
 
     [TestMethod]
@@ -24,61 +51,61 @@ public class ListDependencyAttributeTests
     {
         var model = new OneParentDocument
         {
-            Parent = "A",
-            Child = "B1"
+            Parent = ParentA.Key,
+            Child = ChildB1.Key
         };
 
-        Assert.IsFalse(ValidationTestHelper.IsValid(model));
+        Assert.IsFalse(IsValid(model));
     }
 
     [TestMethod]
-    public void Should_Pass_When_Parent_Value_Is_Empty()
+    public void Should_Pass_When_Child_Value_Is_Null()
     {
         var model = new OneParentDocument
         {
-            Parent = "",
-            Child = "B1"
+            Parent = ParentA.Key,
+            Child = null
         };
 
-        Assert.IsTrue(ValidationTestHelper.IsValid(model));
+        Assert.IsTrue(IsValid(model));
     }
 
     [TestMethod]
-    public void Should_Pass_When_Current_Value_Is_Empty()
+    public void Should_Pass_When_Parent_Value_Is_Null()
     {
         var model = new OneParentDocument
         {
-            Parent = "A",
-            Child = ""
+            Parent = null,
+            Child = ChildA1.Key
         };
 
-        Assert.IsTrue(ValidationTestHelper.IsValid(model));
+        Assert.IsTrue(IsValid(model));
     }
 
     [TestMethod]
-    public void Should_Pass_When_Value_Is_Allowed_By_Two_Parents_Intersection()
+    public void Should_Pass_When_Value_Is_Allowed_By_Two_Parents()
     {
         var model = new TwoParentsDocument
         {
-            Building = "Учебный",
-            RoomType = "Компьютерный класс",
-            Room = "Компьютерный класс 1"
+            Building = EducationalBuilding.Key,
+            RoomType = ComputerRoomType.Key,
+            Room = ComputerRoom1.Key
         };
 
-        Assert.IsTrue(ValidationTestHelper.IsValid(model));
+        Assert.IsTrue(IsValid(model));
     }
 
     [TestMethod]
-    public void Should_Fail_When_Value_Is_Allowed_By_First_Parent_But_Not_By_Second_Parent()
+    public void Should_Fail_When_Value_Is_Not_In_Intersection_Of_Two_Parents()
     {
         var model = new TwoParentsDocument
         {
-            Building = "Учебный",
-            RoomType = "Компьютерный класс",
-            Room = "Лаборатория 1"
+            Building = MainBuilding.Key,
+            RoomType = ComputerRoomType.Key,
+            Room = ComputerRoom1.Key
         };
 
-        Assert.IsFalse(ValidationTestHelper.IsValid(model));
+        Assert.IsFalse(IsValid(model));
     }
 
     [TestMethod]
@@ -86,136 +113,199 @@ public class ListDependencyAttributeTests
     {
         var model = new DocumentWithoutSchema
         {
-            Parent = "A",
-            Child = "A1"
+            Parent = ParentA.Key,
+            Child = ChildA1.Key
         };
 
-        Assert.IsFalse(ValidationTestHelper.IsValid(model));
+        Assert.IsFalse(IsValid(model));
     }
 
     [TestMethod]
-    public void Constructor_Should_Throw_When_Parents_Are_Not_Provided()
+    public void Should_Fail_When_Parent_Field_Does_Not_Exist()
     {
-        Assert.ThrowsExactly<ArgumentException>(() =>
+        var model = new MissingParentDocument
         {
-            _ = new ListDependencyAttribute();
-        });
+            Child = ChildA1.Key
+        };
+
+        Assert.IsFalse(IsValid(model));
     }
 
-    [TestMethod]
-    public void Constructor_Should_Throw_When_Parent_Name_Is_Empty()
+    private static bool IsValid(object model)
     {
-        Assert.ThrowsExactly<ArgumentException>(() =>
-        {
-            _ = new ListDependencyAttribute("");
-        });
+        var validationResults = new List<ValidationResult>();
+
+        return Validator.TryValidateObject(model,new ValidationContext(model),validationResults,true);
     }
 
-    [TestMethod]
-    public void Constructor_Should_Throw_When_Parent_Name_Is_Duplicated()
+    private static DocumentListCatalog CreateOneParentCatalog()
     {
-        Assert.ThrowsExactly<ArgumentException>(() =>
-        {
-            _ = new ListDependencyAttribute("Parent", "Parent");
-        });
+        var catalog = new DocumentListCatalog();
+
+        catalog.AddList(
+            nameof(OneParentDocument.Parent),
+            ParentA,
+            ParentB);
+
+        catalog.AddList(
+            nameof(OneParentDocument.Child),
+            ChildA1,
+            ChildA2,
+            ChildB1);
+
+        return catalog;
     }
 
-    public class OneParentDocument : IListDependencySchemaProvider
+    private static ListDependencySchema CreateOneParentSchema()
     {
-        private static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+        var schema = new ListDependencySchema();
 
-        [ListConstraint("A", "B")]
-        public string Parent { get; set; } = string.Empty;
+        schema.AddRule(
+            nameof(OneParentDocument.Child),
+            nameof(OneParentDocument.Parent),
+            ParentA,
+            ChildA1,
+            ChildA2);
 
-        [ListConstraint("A1", "A2", "B1", "B2")]
+        schema.AddRule(
+            nameof(OneParentDocument.Child),
+            nameof(OneParentDocument.Parent),
+            ParentB,
+            ChildB1);
+
+        return schema;
+    }
+
+    private static DocumentListCatalog CreateTwoParentsCatalog()
+    {
+        var catalog = new DocumentListCatalog();
+
+        catalog.AddList(
+            nameof(TwoParentsDocument.Building),
+            MainBuilding,
+            EducationalBuilding);
+
+        catalog.AddList(
+            nameof(TwoParentsDocument.RoomType),
+            LectureRoomType,
+            ComputerRoomType);
+
+        catalog.AddList(
+            nameof(TwoParentsDocument.Room),
+            Auditorium,
+            ComputerRoom1,
+            ComputerRoom2);
+
+        return catalog;
+    }
+
+    private static ListDependencySchema CreateTwoParentsSchema()
+    {
+        var schema = new ListDependencySchema();
+
+        schema.AddRule(
+            nameof(TwoParentsDocument.Room),
+            nameof(TwoParentsDocument.Building),
+            MainBuilding,
+            Auditorium);
+
+        schema.AddRule(
+            nameof(TwoParentsDocument.Room),
+            nameof(TwoParentsDocument.Building),
+            EducationalBuilding,
+            ComputerRoom1,
+            ComputerRoom2);
+
+        schema.AddRule(
+            nameof(TwoParentsDocument.Room),
+            nameof(TwoParentsDocument.RoomType),
+            LectureRoomType,
+            Auditorium);
+
+        schema.AddRule(
+            nameof(TwoParentsDocument.Room),
+            nameof(TwoParentsDocument.RoomType),
+            ComputerRoomType,
+            ComputerRoom1,
+            ComputerRoom2);
+
+        return schema;
+    }
+
+    public class OneParentDocument : IListConfigurationProvider
+    {
+        private static readonly DocumentListCatalog Catalog = CreateOneParentCatalog();
+        private static readonly ListDependencySchema Schema = CreateOneParentSchema();
+
+        [ListConstraint]
+        public ListOptionKey? Parent { get; set; }
+
+        [ListConstraint]
         [ListDependency(nameof(Parent))]
-        public string Child { get; set; } = string.Empty;
+        public ListOptionKey? Child { get; set; }
+
+        public DocumentListCatalog GetListCatalog()
+        {
+            return Catalog;
+        }
 
         public ListDependencySchema GetListDependencySchema()
         {
-            return DependencySchema;
-        }
-
-        private static ListDependencySchema CreateDependencySchema()
-        {
-            var schema = new ListDependencySchema();
-
-            schema.AddRule(
-                nameof(Child),
-                nameof(Parent),
-                "A",
-                "A1",
-                "A2");
-
-            schema.AddRule(
-                nameof(Child),
-                nameof(Parent),
-                "B",
-                "B1",
-                "B2");
-
-            return schema;
+            return Schema;
         }
     }
 
-    public class TwoParentsDocument : IListDependencySchemaProvider
+    public class TwoParentsDocument : IListConfigurationProvider
     {
-        private static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+        private static readonly DocumentListCatalog Catalog = CreateTwoParentsCatalog();
+        private static readonly ListDependencySchema Schema = CreateTwoParentsSchema();
 
-        [ListConstraint("Главный", "Учебный")]
-        public string Building { get; set; } = string.Empty;
+        [ListConstraint]
+        public ListOptionKey? Building { get; set; }
 
-        [ListConstraint("Компьютерный класс", "Лаборатория")]
-        public string RoomType { get; set; } = string.Empty;
+        [ListConstraint]
+        public ListOptionKey? RoomType { get; set; }
 
-        [ListConstraint(
-            "Компьютерный класс 1",
-            "Компьютерный класс 2",
-            "Лаборатория 1")]
+        [ListConstraint]
         [ListDependency(nameof(Building), nameof(RoomType))]
-        public string Room { get; set; } = string.Empty;
+        public ListOptionKey? Room { get; set; }
+
+        public DocumentListCatalog GetListCatalog()
+        {
+            return Catalog;
+        }
 
         public ListDependencySchema GetListDependencySchema()
         {
-            return DependencySchema;
-        }
-
-        private static ListDependencySchema CreateDependencySchema()
-        {
-            var schema = new ListDependencySchema();
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(Building),
-                "Учебный",
-                "Компьютерный класс 1",
-                "Компьютерный класс 2",
-                "Лаборатория 1");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(RoomType),
-                "Компьютерный класс",
-                "Компьютерный класс 1",
-                "Компьютерный класс 2");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(RoomType),
-                "Лаборатория",
-                "Лаборатория 1");
-
-            return schema;
+            return Schema;
         }
     }
 
     public class DocumentWithoutSchema
     {
-        [ListConstraint("A")]
-        public string Parent { get; set; } = string.Empty;
+        public ListOptionKey? Parent { get; set; }
 
-        [ListConstraint("A1")]
         [ListDependency(nameof(Parent))]
-        public string Child { get; set; } = string.Empty;
+        public ListOptionKey? Child { get; set; }
+    }
+
+    public class MissingParentDocument : IListConfigurationProvider
+    {
+        private static readonly DocumentListCatalog Catalog = CreateOneParentCatalog();
+        private static readonly ListDependencySchema Schema = CreateOneParentSchema();
+
+        [ListConstraint]
+        [ListDependency("Пропущенный родитель")]
+        public ListOptionKey? Child { get; set; }
+
+        public DocumentListCatalog GetListCatalog()
+        {
+            return Catalog;
+        }
+
+        public ListDependencySchema GetListDependencySchema()
+        {
+            return Schema;
+        }
     }
 }

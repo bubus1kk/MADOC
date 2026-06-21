@@ -1,11 +1,68 @@
-﻿using MADOC.Domain.Validation.Attributes;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using MADOC.Domain.Validation.Attributes;
 using MADOC.Domain.Validation.ListDependencies;
+using MADOC.Domain.Validation.Lists;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MADOC.Tests.Domain.ListDependencies;
 
 [TestClass]
 public class ListFieldOptionResolverTests
 {
+    private static readonly ListOption Lecture = new(
+        new ListOptionKey("test.event_format.lecture"),
+        "Лекция");
+
+    private static readonly ListOption Practice = new(
+        new ListOptionKey("test.event_format.practice"),
+        "Практика");
+
+    private static readonly ListOption MainBuilding = new(
+        new ListOptionKey("test.building.main"),
+        "Главный");
+
+    private static readonly ListOption EducationalBuilding = new(
+        new ListOptionKey("test.building.educational"),
+        "Учебный");
+
+    private static readonly ListOption LectureRoomType = new(
+        new ListOptionKey("test.room_type.lecture"),
+        "Лекционная");
+
+    private static readonly ListOption AssemblyHallRoomType = new(
+        new ListOptionKey("test.room_type.assembly_hall"),
+        "Актовый зал");
+
+    private static readonly ListOption ComputerRoomType = new(
+        new ListOptionKey("test.room_type.computer"),
+        "Компьютерный класс");
+
+    private static readonly ListOption LaboratoryRoomType = new(
+        new ListOptionKey("test.room_type.laboratory"),
+        "Лаборатория");
+
+    private static readonly ListOption Auditorium = new(
+        new ListOptionKey("test.room.auditorium"),
+        "Аудитория 101");
+
+    private static readonly ListOption AssemblyHall = new(
+        new ListOptionKey("test.room.assembly_hall"),
+        "Актовый зал 1");
+
+    private static readonly ListOption ComputerRoom1 = new(
+        new ListOptionKey("test.room.computer_1"),
+        "Компьютерный класс 1");
+
+    private static readonly ListOption ComputerRoom2 = new(
+        new ListOptionKey("test.room.computer_2"),
+        "Компьютерный класс 2");
+
+    private static readonly ListOption Laboratory = new(
+        new ListOptionKey("test.room.laboratory"),
+        "Лаборатория 1");
+
     [TestMethod]
     public void GetAvailableValues_Should_Return_All_Values_For_Independent_List_Field()
     {
@@ -17,9 +74,10 @@ public class ListFieldOptionResolverTests
             document,
             nameof(TestDocument.EventFormat));
 
-        CollectionAssert.AreEqual(
-            new List<string> { "Лекция", "Практика" },
-            values.ToList());
+        AssertKeys(
+            values,
+            Lecture.Key,
+            Practice.Key);
     }
 
     [TestMethod]
@@ -27,7 +85,7 @@ public class ListFieldOptionResolverTests
     {
         var document = new TestDocument
         {
-            EventFormat = "Лекция"
+            EventFormat = Lecture.Key
         };
 
         var resolver = new ListFieldOptionResolver();
@@ -36,9 +94,10 @@ public class ListFieldOptionResolverTests
             document,
             nameof(TestDocument.RoomType));
 
-        CollectionAssert.AreEqual(
-            new List<string> { "Лекционная", "Актовый зал" },
-            values.ToList());
+        AssertKeys(
+            values,
+            LectureRoomType.Key,
+            AssemblyHallRoomType.Key);
     }
 
     [TestMethod]
@@ -46,8 +105,8 @@ public class ListFieldOptionResolverTests
     {
         var document = new TestDocument
         {
-            Building = "Учебный",
-            RoomType = "Компьютерный класс"
+            Building = EducationalBuilding.Key,
+            RoomType = ComputerRoomType.Key
         };
 
         var resolver = new ListFieldOptionResolver();
@@ -56,13 +115,10 @@ public class ListFieldOptionResolverTests
             document,
             nameof(TestDocument.Room));
 
-        CollectionAssert.AreEqual(
-            new List<string>
-            {
-                "Компьютерный класс 1",
-                "Компьютерный класс 2"
-            },
-            values.ToList());
+        AssertKeys(
+            values,
+            ComputerRoom1.Key,
+            ComputerRoom2.Key);
     }
 
     [TestMethod]
@@ -70,8 +126,8 @@ public class ListFieldOptionResolverTests
     {
         var document = new TestDocument
         {
-            Building = "Учебный",
-            RoomType = ""
+            Building = EducationalBuilding.Key,
+            RoomType = null
         };
 
         var resolver = new ListFieldOptionResolver();
@@ -88,8 +144,8 @@ public class ListFieldOptionResolverTests
     {
         var document = new TestDocument
         {
-            Building = "Главный",
-            RoomType = "Компьютерный класс"
+            Building = MainBuilding.Key,
+            RoomType = ComputerRoomType.Key
         };
 
         var resolver = new ListFieldOptionResolver();
@@ -148,108 +204,177 @@ public class ListFieldOptionResolverTests
     }
 
     [TestMethod]
-    public void GetAvailableValues_Should_Throw_When_Dependent_Document_Does_Not_Provide_Schema()
+    public void GetAvailableValues_Should_Throw_When_Document_Does_Not_Provide_Configuration()
     {
         var resolver = new ListFieldOptionResolver();
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>
         {
             resolver.GetAvailableValues(
-                new DocumentWithoutSchema(),
-                nameof(DocumentWithoutSchema.Child));
+                new DocumentWithoutConfiguration(),
+                nameof(DocumentWithoutConfiguration.Child));
         });
     }
 
-    public class TestDocument : IListDependencySchemaProvider
+    private static void AssertKeys(
+        IReadOnlyList<ListOptionKey> actualValues,
+        params ListOptionKey[] expectedValues)
     {
-        private static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+        CollectionAssert.AreEqual(
+            expectedValues.ToList(),
+            actualValues.ToList());
+    }
 
-        [ListConstraint("Лекция", "Практика")]
-        public string EventFormat { get; set; } = string.Empty;
+    private static DocumentListCatalog CreateCatalog()
+    {
+        var catalog = new DocumentListCatalog();
 
-        [ListConstraint("Главный", "Учебный")]
-        public string Building { get; set; } = string.Empty;
+        catalog.AddList(
+            nameof(TestDocument.EventFormat),
+            Lecture,
+            Practice);
 
-        [ListConstraint("Лекционная", "Актовый зал", "Компьютерный класс", "Лаборатория")]
+        catalog.AddList(
+            nameof(TestDocument.Building),
+            MainBuilding,
+            EducationalBuilding);
+
+        catalog.AddList(
+            nameof(TestDocument.RoomType),
+            LectureRoomType,
+            AssemblyHallRoomType,
+            ComputerRoomType,
+            LaboratoryRoomType);
+
+        catalog.AddList(
+            nameof(TestDocument.Room),
+            Auditorium,
+            AssemblyHall,
+            ComputerRoom1,
+            ComputerRoom2,
+            Laboratory);
+
+        return catalog;
+    }
+
+    private static ListDependencySchema CreateDependencySchema()
+    {
+        var schema = new ListDependencySchema();
+
+        schema.AddRule(
+            nameof(TestDocument.RoomType),
+            nameof(TestDocument.EventFormat),
+            Lecture,
+            LectureRoomType,
+            AssemblyHallRoomType);
+
+        schema.AddRule(
+            nameof(TestDocument.RoomType),
+            nameof(TestDocument.EventFormat),
+            Practice,
+            ComputerRoomType,
+            LaboratoryRoomType);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.Building),
+            MainBuilding,
+            Auditorium,
+            AssemblyHall);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.Building),
+            EducationalBuilding,
+            ComputerRoom1,
+            ComputerRoom2,
+            Laboratory);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.RoomType),
+            LectureRoomType,
+            Auditorium);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.RoomType),
+            AssemblyHallRoomType,
+            AssemblyHall);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.RoomType),
+            ComputerRoomType,
+            ComputerRoom1,
+            ComputerRoom2);
+
+        schema.AddRule(
+            nameof(TestDocument.Room),
+            nameof(TestDocument.RoomType),
+            LaboratoryRoomType,
+            Laboratory);
+
+        return schema;
+    }
+
+    public class TestDocument : IListConfigurationProvider
+    {
+        private static readonly DocumentListCatalog Catalog = CreateCatalog();
+
+        private static readonly ListDependencySchema Schema = CreateDependencySchema();
+
+        [ListConstraint]
+        public ListOptionKey? EventFormat { get; set; }
+
+        [ListConstraint]
+        public ListOptionKey? Building { get; set; }
+
+        [ListConstraint]
         [ListDependency(nameof(EventFormat))]
-        public string RoomType { get; set; } = string.Empty;
+        public ListOptionKey? RoomType { get; set; }
 
-        [ListConstraint(
-            "Аудитория 101",
-            "Актовый зал 1",
-            "Компьютерный класс 1",
-            "Компьютерный класс 2",
-            "Лаборатория 1")]
+        [ListConstraint]
         [ListDependency(nameof(Building), nameof(RoomType))]
-        public string Room { get; set; } = string.Empty;
+        public ListOptionKey? Room { get; set; }
+
+        public DocumentListCatalog GetListCatalog()
+        {
+            return Catalog;
+        }
 
         public ListDependencySchema GetListDependencySchema()
         {
-            return DependencySchema;
-        }
-
-        private static ListDependencySchema CreateDependencySchema()
-        {
-            var schema = new ListDependencySchema();
-
-            schema.AddRule(
-                nameof(RoomType),
-                nameof(EventFormat),
-                "Лекция",
-                "Лекционная",
-                "Актовый зал");
-
-            schema.AddRule(
-                nameof(RoomType),
-                nameof(EventFormat),
-                "Практика",
-                "Компьютерный класс",
-                "Лаборатория");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(Building),
-                "Главный",
-                "Аудитория 101",
-                "Актовый зал 1");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(Building),
-                "Учебный",
-                "Компьютерный класс 1",
-                "Компьютерный класс 2",
-                "Лаборатория 1");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(RoomType),
-                "Компьютерный класс",
-                "Компьютерный класс 1",
-                "Компьютерный класс 2");
-
-            schema.AddRule(
-                nameof(Room),
-                nameof(RoomType),
-                "Лаборатория",
-                "Лаборатория 1");
-
-            return schema;
+            return Schema;
         }
     }
 
-    public class NonListDocument
+    public class NonListDocument : IListConfigurationProvider
     {
+        private static readonly DocumentListCatalog Catalog = new();
+
+        private static readonly ListDependencySchema Schema = new();
+
         public string Name { get; set; } = string.Empty;
+
+        public DocumentListCatalog GetListCatalog()
+        {
+            return Catalog;
+        }
+
+        public ListDependencySchema GetListDependencySchema()
+        {
+            return Schema;
+        }
     }
 
-    public class DocumentWithoutSchema
+    public class DocumentWithoutConfiguration
     {
-        [ListConstraint("A")]
-        public string Parent { get; set; } = string.Empty;
+        [ListConstraint]
+        public ListOptionKey? Parent { get; set; }
 
-        [ListConstraint("A1")]
+        [ListConstraint]
         [ListDependency(nameof(Parent))]
-        public string Child { get; set; } = string.Empty;
+        public ListOptionKey? Child { get; set; }
     }
 }
