@@ -1,166 +1,226 @@
-﻿using MADOC.Domain.Validation.ListDependencies;
+﻿using MADOC.Domain.Documents;
+using MADOC.Domain.Validation.ListDependencies;
 using MADOC.Domain.Validation.Lists;
 
-namespace MADOC.Domain.Documents.ListConfigurations
+namespace MADOC.Domain.Documents.ListConfigurations;
+
+public static class CertificateRequestListConfiguration
 {
-    public static class CertificateRequestListConfiguration
+    private const string KeyPrefix = "certificate_request";
+
+    public static readonly DocumentListCatalog ListCatalog = CreateListCatalog();
+
+    public static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+
+    public static class CertificateType
     {
-        public static readonly DocumentListCatalog ListCatalog = CreateListCatalog();
+        public static readonly ListOption Study = CreateOption("type.study","Справка об обучении");
 
-        public static readonly ListDependencySchema DependencySchema = CreateDependencySchema();
+        public static readonly ListOption StudyPeriod = CreateOption("type.study_period","Справка о периоде обучения");
 
-        public static class CertificateType
-        {
-            public static readonly ListOptionKey Study = new("certificate.type.study");
-            public static readonly ListOptionKey StudyPeriod = new("certificate.type.study_period");
-            public static readonly ListOptionKey MilitaryOffice = new("certificate.type.military_office");
-            public static readonly ListOptionKey Scholarship = new("certificate.type.scholarship");
-        }
+        public static readonly ListOption MilitaryOffice = CreateOption("type.military_office","Справка для военкомата");
 
-        public static class CertificatePurpose
-        {
-            public static readonly ListOptionKey AnyPlace = new("certificate.purpose.any_place");
-            public static readonly ListOptionKey SocialProtection = new("certificate.purpose.social_protection");
-            public static readonly ListOptionKey Employer = new("certificate.purpose.employer");
-            public static readonly ListOptionKey Archive = new("certificate.purpose.archive");
-            public static readonly ListOptionKey Transfer = new("certificate.purpose.transfer");
-            public static readonly ListOptionKey Recovery = new("certificate.purpose.recovery");
-            public static readonly ListOptionKey InitialMilitaryRegistration = new("certificate.purpose.initial_military_registration");
-            public static readonly ListOptionKey DataClarification = new("certificate.purpose.data_clarification");
-            public static readonly ListOptionKey Bank = new("certificate.purpose.bank");
-        }
+        public static readonly ListOption Scholarship = CreateOption("type.scholarship","Справка о стипендии");
+    }
 
-        public static class CertificateFormat
-        {
-            public static readonly ListOptionKey Electronic = new("certificate.format.electronic");
-            public static readonly ListOptionKey Paper = new("certificate.format.paper");
-            public static readonly ListOptionKey PaperWithStamp = new("certificate.format.paper_with_stamp");
-        }
+    public static class CertificatePurpose
+    {
+        public static readonly ListOption AnyPlace = CreateOption("purpose.any_place","По месту требования");
 
-        public static class ReceivePlace
-        {
-            public static readonly ListOptionKey PersonalAccount = new("certificate.receive_place.personal_account");
-            public static readonly ListOptionKey Email = new("certificate.receive_place.email");
-            public static readonly ListOptionKey EducationOffice = new("certificate.receive_place.education_office");
-            public static readonly ListOptionKey Chancellery = new("certificate.receive_place.chancellery");
-        }
+        public static readonly ListOption SocialProtection = CreateOption("purpose.social_protection","Для социальной защиты");
 
-        private static DocumentListCatalog CreateListCatalog()
-        {
-            var catalog = new DocumentListCatalog();
+        public static readonly ListOption Employer = CreateOption("purpose.employer","Для работодателя");
 
-            catalog.AddList(
-                nameof(CertificateRequestDocument.CertificateType),
-                new ListOption(CertificateType.Study, "Справка об обучении"),
-                new ListOption(CertificateType.StudyPeriod, "Справка о периоде обучения"),
-                new ListOption(CertificateType.MilitaryOffice, "Справка для военкомата"),
-                new ListOption(CertificateType.Scholarship, "Справка о стипендии"));
+        public static readonly ListOption Archive = CreateOption("purpose.archive","Для архива");
 
-            catalog.AddList(
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                new ListOption(CertificatePurpose.AnyPlace, "По месту требования"),
-                new ListOption(CertificatePurpose.SocialProtection, "Для социальной защиты"),
-                new ListOption(CertificatePurpose.Employer, "Для работодателя"),
-                new ListOption(CertificatePurpose.Archive, "Для архива"),
-                new ListOption(CertificatePurpose.Transfer, "Для перевода"),
-                new ListOption(CertificatePurpose.Recovery, "Для восстановления"),
-                new ListOption(CertificatePurpose.InitialMilitaryRegistration, "Первичная постановка"),
-                new ListOption(CertificatePurpose.DataClarification, "Уточнение данных"),
-                new ListOption(CertificatePurpose.Bank, "Для банка"));
+        public static readonly ListOption Transfer = CreateOption("purpose.transfer","Для перевода");
 
-            catalog.AddList(
-                nameof(CertificateRequestDocument.CertificateFormat),
-                new ListOption(CertificateFormat.Electronic, "Электронная"),
-                new ListOption(CertificateFormat.Paper, "Бумажная"),
-                new ListOption(CertificateFormat.PaperWithStamp, "Бумажная с печатью"));
+        public static readonly ListOption Recovery = CreateOption("purpose.recovery","Для восстановления");
 
-            catalog.AddList(
-                nameof(CertificateRequestDocument.ReceivePlace),
-                new ListOption(ReceivePlace.PersonalAccount, "Личный кабинет"),
-                new ListOption(ReceivePlace.Email, "Электронная почта"),
-                new ListOption(ReceivePlace.EducationOffice, "Учебная часть"),
-                new ListOption(ReceivePlace.Chancellery, "Канцелярия"));
+        public static readonly ListOption InitialMilitaryRegistration = CreateOption("purpose.initial_military_registration",
+            "Первичная постановка");
 
-            return catalog;
-        }
+        public static readonly ListOption DataClarification = CreateOption("purpose.data_clarification","Уточнение данных");
 
-        private static ListDependencySchema CreateDependencySchema()
-        {
-            var schema = new ListDependencySchema();
+        public static readonly ListOption Bank = CreateOption("purpose.bank","Для банка");
+    }
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                nameof(CertificateRequestDocument.CertificateType),
-                CertificateType.Study,
-                CertificatePurpose.AnyPlace,
-                CertificatePurpose.SocialProtection,
-                CertificatePurpose.Employer);
+    public static class CertificateFormat
+    {
+        public static readonly ListOption Electronic = CreateOption("format.electronic","Электронная");
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                nameof(CertificateRequestDocument.CertificateType),
-                CertificateType.StudyPeriod,
-                CertificatePurpose.Archive,
-                CertificatePurpose.Transfer,
-                CertificatePurpose.Recovery);
+        public static readonly ListOption Paper = CreateOption("format.paper","Бумажная");
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                nameof(CertificateRequestDocument.CertificateType),
-                CertificateType.MilitaryOffice,
-                CertificatePurpose.InitialMilitaryRegistration,
-                CertificatePurpose.DataClarification);
+        public static readonly ListOption PaperWithStamp = CreateOption("format.paper_with_stamp","Бумажная с печатью");
+    }
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                nameof(CertificateRequestDocument.CertificateType),
-                CertificateType.Scholarship,
-                CertificatePurpose.Bank,
-                CertificatePurpose.SocialProtection);
+    public static class ReceivePlace
+    {
+        public static readonly ListOption PersonalAccount = CreateOption("receive_place.personal_account","Личный кабинет");
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificateFormat),
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                CertificatePurpose.AnyPlace,
-                CertificateFormat.Electronic,
-                CertificateFormat.Paper);
+        public static readonly ListOption Email = CreateOption("receive_place.email","Электронная почта");
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificateFormat),
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                CertificatePurpose.SocialProtection,
-                CertificateFormat.Electronic,
-                CertificateFormat.Paper,
-                CertificateFormat.PaperWithStamp);
+        public static readonly ListOption EducationOffice = CreateOption("receive_place.education_office","Учебная часть");
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.CertificateFormat),
-                nameof(CertificateRequestDocument.CertificatePurpose),
-                CertificatePurpose.Employer,
-                CertificateFormat.Electronic,
-                CertificateFormat.PaperWithStamp);
+        public static readonly ListOption Chancellery = CreateOption("receive_place.chancellery","Канцелярия");
+    }
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.ReceivePlace),
-                nameof(CertificateRequestDocument.CertificateFormat),
-                CertificateFormat.Electronic,
-                ReceivePlace.PersonalAccount,
-                ReceivePlace.Email);
+    private static DocumentListCatalog CreateListCatalog()
+    {
+        var catalog = new DocumentListCatalog();
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.ReceivePlace),
-                nameof(CertificateRequestDocument.CertificateFormat),
-                CertificateFormat.Paper,
-                ReceivePlace.EducationOffice);
+        catalog.AddList(
+            nameof(CertificateRequestDocument.CertificateType),
+            CertificateType.Study,
+            CertificateType.StudyPeriod,
+            CertificateType.MilitaryOffice,
+            CertificateType.Scholarship);
 
-            schema.AddRule(
-                nameof(CertificateRequestDocument.ReceivePlace),
-                nameof(CertificateRequestDocument.CertificateFormat),
-                CertificateFormat.PaperWithStamp,
-                ReceivePlace.EducationOffice,
-                ReceivePlace.Chancellery);
+        catalog.AddList(
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.AnyPlace,
+            CertificatePurpose.SocialProtection,
+            CertificatePurpose.Employer,
+            CertificatePurpose.Archive,
+            CertificatePurpose.Transfer,
+            CertificatePurpose.Recovery,
+            CertificatePurpose.InitialMilitaryRegistration,
+            CertificatePurpose.DataClarification,
+            CertificatePurpose.Bank);
 
-            return schema;
-        }
+        catalog.AddList(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            CertificateFormat.Electronic,
+            CertificateFormat.Paper,
+            CertificateFormat.PaperWithStamp);
+
+        catalog.AddList(
+            nameof(CertificateRequestDocument.ReceivePlace),
+            ReceivePlace.PersonalAccount,
+            ReceivePlace.Email,
+            ReceivePlace.EducationOffice,
+            ReceivePlace.Chancellery);
+
+        return catalog;
+    }
+
+    private static ListDependencySchema CreateDependencySchema()
+    {
+        var schema = new ListDependencySchema();
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            nameof(CertificateRequestDocument.CertificateType),
+            CertificateType.Study,
+            CertificatePurpose.AnyPlace,
+            CertificatePurpose.SocialProtection,
+            CertificatePurpose.Employer);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            nameof(CertificateRequestDocument.CertificateType),
+            CertificateType.StudyPeriod,
+            CertificatePurpose.Archive,
+            CertificatePurpose.Transfer,
+            CertificatePurpose.Recovery);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            nameof(CertificateRequestDocument.CertificateType),
+            CertificateType.MilitaryOffice,
+            CertificatePurpose.InitialMilitaryRegistration,
+            CertificatePurpose.DataClarification);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            nameof(CertificateRequestDocument.CertificateType),
+            CertificateType.Scholarship,
+            CertificatePurpose.Bank,
+            CertificatePurpose.SocialProtection);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.AnyPlace,
+            CertificateFormat.Electronic,
+            CertificateFormat.Paper);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.SocialProtection,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.Employer,
+            CertificateFormat.Electronic,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.Archive,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.Transfer,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.Recovery,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.InitialMilitaryRegistration,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.DataClarification,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.CertificateFormat),
+            nameof(CertificateRequestDocument.CertificatePurpose),
+            CertificatePurpose.Bank,
+            CertificateFormat.PaperWithStamp);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.ReceivePlace),
+            nameof(CertificateRequestDocument.CertificateFormat),
+            CertificateFormat.Electronic,
+            ReceivePlace.PersonalAccount,
+            ReceivePlace.Email);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.ReceivePlace),
+            nameof(CertificateRequestDocument.CertificateFormat),
+            CertificateFormat.Paper,
+            ReceivePlace.EducationOffice);
+
+        schema.AddRule(
+            nameof(CertificateRequestDocument.ReceivePlace),
+            nameof(CertificateRequestDocument.CertificateFormat),
+            CertificateFormat.PaperWithStamp,
+            ReceivePlace.EducationOffice,
+            ReceivePlace.Chancellery);
+
+        return schema;
+    }
+
+    private static ListOption CreateOption(string keyPart, string displayName)
+    {
+        return new ListOption(
+            new ListOptionKey($"{KeyPrefix}.{keyPart}"),
+            displayName);
     }
 }
