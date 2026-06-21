@@ -7,6 +7,15 @@ namespace MADOC.Domain.Validation.Attributes
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public class ListConstraintAttribute : ValidationAttribute
     {
+        public ListConstraintAttribute(params string[] allowedValues)
+        {
+            ArgumentNullException.ThrowIfNull(allowedValues);
+
+            AllowedValues = allowedValues;
+        }
+
+        public IReadOnlyList<string> AllowedValues { get; }
+
         protected override ValidationResult? IsValid(
             object? value,
             ValidationContext validationContext)
@@ -14,6 +23,25 @@ namespace MADOC.Domain.Validation.Attributes
             if (value is null)
             {
                 return ValidationResult.Success;
+            }
+
+            if (AllowedValues.Count > 0)
+            {
+                var currentValue = value.ToString();
+
+                if (string.IsNullOrWhiteSpace(currentValue))
+                {
+                    return ValidationResult.Success;
+                }
+
+                if (AllowedValues.Contains(currentValue))
+                {
+                    return ValidationResult.Success;
+                }
+
+                return new ValidationResult(
+                    $"Значение \"{currentValue}\" недопустимо. " +
+                    $"Допустимые значения: {string.Join(", ", AllowedValues)}.");
             }
 
             if (!ListOptionKeyConverter.TryConvert(value, out var selectedKey))
