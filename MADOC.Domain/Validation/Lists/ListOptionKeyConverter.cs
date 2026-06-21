@@ -10,12 +10,6 @@
                 return true;
             }
 
-            if (value is string stringValue && !string.IsNullOrWhiteSpace(stringValue))
-            {
-                key = new ListOptionKey(stringValue);
-                return true;
-            }
-
             key = default;
             return false;
         }

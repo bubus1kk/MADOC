@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MADOC.Domain.Validation.Lists;
 
 namespace MADOC.Domain.Validation.ListDependencies
 {
@@ -7,7 +8,7 @@ namespace MADOC.Domain.Validation.ListDependencies
     {
         private readonly List<ListDependencyRule> rules = new();
 
-        public IReadOnlyList<ListDependencyRule> Rules//для чтения, чтобы не давать возможность изменять правила извне
+        public IReadOnlyList<ListDependencyRule> Rules
         {
             get
             {
@@ -16,26 +17,26 @@ namespace MADOC.Domain.Validation.ListDependencies
         }
 
         public void AddRule(
-            string childFieldName,
-            string parentFieldName,
-            string parentFieldValue,
-            params string[] allowedChildValues)
+            string childField,
+            string parentField,
+            ListOptionKey parentValueKey,
+            params ListOptionKey[] allowedChildValueKeys)
         {
             var rule = new ListDependencyRule(
-                childFieldName,
-                parentFieldName,
-                parentFieldValue,
-                allowedChildValues);
+                childField,
+                parentField,
+                parentValueKey,
+                allowedChildValueKeys);
 
             rules.Add(rule);
         }
 
-        public bool HasRulesForConnection(string childFieldName, string parentFieldName)//проверяет, есть ли правила, связывающие childFieldName и parentFieldName
+        public bool HasRulesForConnection(string childField, string parentField)
         {
             foreach (var rule in rules)
             {
-                if (rule.ChildFieldName == childFieldName &&
-                    rule.ParentFieldName == parentFieldName)
+                if (rule.ChildField == childField &&
+                    rule.ParentField == parentField)
                 {
                     return true;
                 }
@@ -44,42 +45,41 @@ namespace MADOC.Domain.Validation.ListDependencies
             return false;
         }
 
-        public IReadOnlyList<string> GetAllowedValues(string childFieldName,IReadOnlyDictionary<string, string> parentFieldValues)
+        public IReadOnlyList<ListOptionKey> GetAllowedValues(
+            string childField,
+            IReadOnlyDictionary<string, ListOptionKey> parentFieldValues)
         {
-            if (string.IsNullOrWhiteSpace(childFieldName))
+            if (string.IsNullOrWhiteSpace(childField))
             {
                 throw new ArgumentException(
                     "Имя зависимого поля не может быть пустым.",
-                    nameof(childFieldName));
+                    nameof(childField));
             }
 
             ArgumentNullException.ThrowIfNull(parentFieldValues);
 
             if (parentFieldValues.Count == 0)
             {
-                return Array.Empty<string>();
+                return Array.Empty<ListOptionKey>();
             }
 
-            List<string>? result = null;
+            List<ListOptionKey>? result = null;
 
             foreach (var parentFieldValuePair in parentFieldValues)
             {
-                var parentFieldName = parentFieldValuePair.Key;
-                var parentFieldValue = parentFieldValuePair.Value;
-
                 var allowedForCurrentParent = GetAllowedValuesForOneParent(
-                    childFieldName,
-                    parentFieldName,
-                    parentFieldValue);
+                    childField,
+                    parentFieldValuePair.Key,
+                    parentFieldValuePair.Value);
 
                 if (allowedForCurrentParent.Count == 0)
                 {
-                    return Array.Empty<string>();
+                    return Array.Empty<ListOptionKey>();
                 }
 
                 if (result is null)
                 {
-                    result = new List<string>(allowedForCurrentParent);
+                    result = new List<ListOptionKey>(allowedForCurrentParent);
                 }
                 else
                 {
@@ -89,42 +89,42 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             if (result is null)
             {
-                return Array.Empty<string>();
+                return Array.Empty<ListOptionKey>();
             }
 
             return result;
         }
 
-        private List<string> GetAllowedValuesForOneParent(
-            string childFieldName,
-            string parentFieldName,
-            string parentFieldValue)
+        private List<ListOptionKey> GetAllowedValuesForOneParent(
+            string childField,
+            string parentField,
+            ListOptionKey parentValueKey)
         {
-            var result = new List<string>();
-            var uniqueValues = new HashSet<string>();
+            var result = new List<ListOptionKey>();
+            var uniqueValues = new HashSet<ListOptionKey>();
 
             foreach (var rule in rules)
             {
-                if (rule.ChildFieldName != childFieldName)
+                if (rule.ChildField != childField)
                 {
                     continue;
                 }
 
-                if (rule.ParentFieldName != parentFieldName)
+                if (rule.ParentField != parentField)
                 {
                     continue;
                 }
 
-                if (rule.ParentFieldValue != parentFieldValue)
+                if (rule.ParentValueKey != parentValueKey)
                 {
                     continue;
                 }
 
-                foreach (var allowedValue in rule.AllowedChildFieldValues)
+                foreach (var allowedValueKey in rule.AllowedChildValueKeys)
                 {
-                    if (uniqueValues.Add(allowedValue))
+                    if (uniqueValues.Add(allowedValueKey))
                     {
-                        result.Add(allowedValue);
+                        result.Add(allowedValueKey);
                     }
                 }
             }
@@ -132,12 +132,12 @@ namespace MADOC.Domain.Validation.ListDependencies
             return result;
         }
 
-        private static List<string> IntersectPreservingOrder(
-            IReadOnlyList<string> firstValues,
-            IReadOnlyList<string> secondValues)
+        private static List<ListOptionKey> IntersectPreservingOrder(
+            IReadOnlyList<ListOptionKey> firstValues,
+            IReadOnlyList<ListOptionKey> secondValues)
         {
-            var secondValuesSet = new HashSet<string>(secondValues);
-            var result = new List<string>();
+            var secondValuesSet = new HashSet<ListOptionKey>(secondValues);
+            var result = new List<ListOptionKey>();
 
             foreach (var value in firstValues)
             {
