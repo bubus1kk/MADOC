@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using MADOC.Domain.Validation.Lists;
+﻿using MADOC.Domain.Validation.Lists;
 
 namespace MADOC.Domain.Validation.ListDependencies
 {
@@ -19,13 +17,29 @@ namespace MADOC.Domain.Validation.ListDependencies
         public void AddRule(
             string childField,
             string parentField,
-            ListOptionKey parentValueKey,
-            params ListOptionKey[] allowedChildValueKeys)
+            ListOption parentOption,
+            params ListOption[] allowedChildOptions)
         {
+            ArgumentNullException.ThrowIfNull(parentOption);
+
+            if (allowedChildOptions is null || allowedChildOptions.Length == 0)
+            {
+                throw new ArgumentException("Список разрешённых вариантов зависимого поля не может быть пустым", nameof(allowedChildOptions));
+            }
+
+            var allowedChildValueKeys = new ListOptionKey[allowedChildOptions.Length];
+
+            for (var i = 0; i < allowedChildOptions.Length; i++)
+            {
+                ArgumentNullException.ThrowIfNull(allowedChildOptions[i]);
+
+                allowedChildValueKeys[i] = allowedChildOptions[i].Key;
+            }
+
             var rule = new ListDependencyRule(
                 childField,
                 parentField,
-                parentValueKey,
+                parentOption.Key,
                 allowedChildValueKeys);
 
             rules.Add(rule);
@@ -51,9 +65,7 @@ namespace MADOC.Domain.Validation.ListDependencies
         {
             if (string.IsNullOrWhiteSpace(childField))
             {
-                throw new ArgumentException(
-                    "Имя зависимого поля не может быть пустым.",
-                    nameof(childField));
+                throw new ArgumentException("Имя зависимого поля не может быть пустым", nameof(childField));
             }
 
             ArgumentNullException.ThrowIfNull(parentFieldValues);
@@ -83,7 +95,9 @@ namespace MADOC.Domain.Validation.ListDependencies
                 }
                 else
                 {
-                    result = IntersectPreservingOrder(result, allowedForCurrentParent);
+                    result = IntersectPreservingOrder(
+                        result,
+                        allowedForCurrentParent);
                 }
             }
 
