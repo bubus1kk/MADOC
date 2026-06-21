@@ -68,16 +68,16 @@ namespace MADOC.Domain.Validation.ListDependencies
                 throw new ArgumentException("Имя зависимого поля не может быть пустым", nameof(childField));
             }
 
-            ArgumentNullException.ThrowIfNull(parentFieldValues);
+            ArgumentNullException.ThrowIfNull(parentValues);
 
-            if (parentFieldValues.Count == 0)
+            if (parentValues.Count == 0)
             {
                 return Array.Empty<ListOptionKey>();
             }
 
             List<ListOptionKey>? result = null;
 
-            foreach (var parentFieldValuePair in parentFieldValues)
+            foreach (var parentValuePair in parentValues)
             {
                 var allowedForCurrentParent = GetAllowedValuesForOneParent(
                     childField,
