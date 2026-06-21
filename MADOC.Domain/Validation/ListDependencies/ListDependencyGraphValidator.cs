@@ -1,4 +1,5 @@
 ﻿using MADOC.Domain.Validation.Attributes;
+using MADOC.Domain.Validation.Lists;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
@@ -23,10 +24,17 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             var graph = new Dictionary<string, HashSet<string>>();
             var attributeConnections = new HashSet<string>();
+
+            var documentHasListFields = false;
             var documentHasDependencies = false;
 
             foreach (var property in properties)
             {
+                if (property.GetCustomAttribute<ListConstraintAttribute>() is not null)
+                {
+                    documentHasListFields = true;
+                }
+
                 var dependency = property.GetCustomAttribute<ListDependencyAttribute>();
 
                 if (dependency is null)
@@ -36,57 +44,83 @@ namespace MADOC.Domain.Validation.ListDependencies
 
                 documentHasDependencies = true;
 
-                ValidateChildFieldName(property, validationResults);
+                ValidateChildField(property, validationResults);
 
-                foreach (var ParentFieldNameName in dependency.DependsOnFields)
+                foreach (var parentFieldName in dependency.DependsOnFields)
                 {
-                    var connectionKey = CreateConnectionKey(property.Name, ParentFieldNameName);
+                    var connectionKey = CreateConnectionKey(property.Name, parentFieldName);
 
                     attributeConnections.Add(connectionKey);
 
-                    ValidateParentFieldName(property.Name, ParentFieldNameName, propertiesByName, validationResults);
+                    ValidateParentField(property.Name, parentFieldName, propertiesByName, validationResults);
 
-                    AddGraphEdge(graph, ParentFieldNameName, property.Name);
+                    AddGraphEdge(graph, parentFieldName, property.Name);
                 }
             }
 
-            if (documentHasDependencies)
+            var documentProvidesConfiguration = typeof(IListConfigurationProvider).IsAssignableFrom(documentType);
+
+            if (documentHasListFields || documentHasDependencies || documentProvidesConfiguration)
             {
-                var schema = TryGetSchema(documentType, validationResults);
+                var configurationProvider = TryGetConfigurationProvider(documentType, validationResults);
 
-                if (schema is not null)
+                if (configurationProvider is not null)
                 {
-                    ValidateSchemaRules(schema, propertiesByName, attributeConnections, validationResults);
+                    var catalog = configurationProvider.GetListCatalog();
+                    var schema = configurationProvider.GetListDependencySchema();
 
-                    ValidateAttributeConnectionsHaveSchemaRules(schema, attributeConnections, validationResults);
+                    if (catalog is null)
+                    {
+                        validationResults.Add(new ValidationResult($"Документ {documentType.Name} вернул пустой каталог списков"));
+                    }
+                    else
+                    {
+                        ValidateCatalog(catalog, propertiesByName, validationResults);
+                    }
+
+                    if (schema is null)
+                    {
+                        validationResults.Add(new ValidationResult($"Документ {documentType.Name} вернул пустую схему зависимостей списков"));
+                    }
+                    else if (catalog is not null)
+                    {
+                        ValidateSchemaRules(schema, catalog, propertiesByName, attributeConnections, validationResults);
+
+                        ValidateAttributeConnectionsHaveSchemaRules(schema, attributeConnections, validationResults);
+                    }
                 }
             }
 
             if (ContainsCycle(graph))
             {
-                validationResults.Add(new ValidationResult("граф зависимостей списков не должен содержать циклы"));
+                validationResults.Add(new ValidationResult("Граф зависимостей списков не должен содержать циклы"));
             }
 
             return validationResults;
         }
 
-        private static void ValidateChildFieldName(PropertyInfo childProperty, List<ValidationResult> validationResults)
+        private static void ValidateChildField(PropertyInfo childProperty, List<ValidationResult> validationResults)
         {
             var childListConstraint = childProperty.GetCustomAttribute<ListConstraintAttribute>();
 
             if (childListConstraint is null)
             {
-                validationResults.Add(new ValidationResult($"поле {childProperty.Name} имеет зависимость от другого списка, " +
-                        "но не объявлено как выпадающий список"));
+                validationResults.Add(new ValidationResult($"Поле {childProperty.Name} имеет зависимость от другого списка, " +
+                        "но не объявлено как выпадающий список через"));
+            }
+
+            if (!IsListOptionKeyProperty(childProperty))
+            {
+                validationResults.Add(new ValidationResult($"Поле {childProperty.Name} должно иметь тип ListOptionKey? для работы со списками"));
             }
         }
 
-        private static void ValidateParentFieldName(string ChildFieldNameName, string ParentFieldNameName, Dictionary<string,
-            PropertyInfo> propertiesByName, List<ValidationResult> validationResults)
+        private static void ValidateParentField(string childFieldName, string parentFieldName, Dictionary<string, PropertyInfo> propertiesByName,
+            List<ValidationResult> validationResults)
         {
-            if (!propertiesByName.TryGetValue(ParentFieldNameName, out var parentProperty))
+            if (!propertiesByName.TryGetValue(parentFieldName, out var parentProperty))
             {
-                validationResults.Add(new ValidationResult($"Родительское поле {ParentFieldNameName} для поля {ChildFieldNameName} не существует"));
+                validationResults.Add(new ValidationResult($"Родительское поле {parentFieldName} для поля {childFieldName} не существует"));
 
                 return;
             }
@@ -95,25 +129,29 @@ namespace MADOC.Domain.Validation.ListDependencies
 
             if (parentListConstraint is null)
             {
-                validationResults.Add(new ValidationResult($"родительское поле {ParentFieldNameName} для поля {ChildFieldNameName} " +
-                    "не является выпадающим списком"));
+                validationResults.Add(new ValidationResult($"Родительское поле {parentFieldName} для поля {childFieldName} " +
+                        "не является выпадающим списком"));
+            }
+
+            if (!IsListOptionKeyProperty(parentProperty))
+            {
+                validationResults.Add(new ValidationResult($"Родительское поле {parentFieldName} должно иметь тип ListOptionKey?"));
             }
         }
 
-        private static ListDependencySchema? TryGetSchema(Type documentType, List<ValidationResult> validationResults)
+        private static IListConfigurationProvider? TryGetConfigurationProvider(Type documentType, List<ValidationResult> validationResults)
         {
-            if (!typeof(IListDependencySchemaProvider).IsAssignableFrom(documentType))
+            if (!typeof(IListConfigurationProvider).IsAssignableFrom(documentType))
             {
-                validationResults.Add(new ValidationResult($"документ {documentType.Name} содержит зависимости списков, " +
-                        "но не реализует IListDependencySchemaProvider."));
+                validationResults.Add(new ValidationResult($"Документ {documentType.Name} содержит списки или зависимости списков, " +
+                        "но не реализует IListConfigurationProvider"));
 
                 return null;
             }
 
             if (documentType.IsAbstract)
             {
-                validationResults.Add(new ValidationResult($"нельзя создать экземпляр абстрактного документа {documentType.Name}" +
-                        "для получения схемы зависимостей"));
+                validationResults.Add(new ValidationResult($"Нельзя создать экземпляр абстрактного документа {documentType.Name}."));
 
                 return null;
             }
@@ -126,101 +164,146 @@ namespace MADOC.Domain.Validation.ListDependencies
             }
             catch (Exception exception)
             {
-                validationResults.Add(new ValidationResult($"Не удалось создать экземпляр документа {documentType.Name} " +
-                        $"для получения схемы зависимостей. Ошибка: {exception.Message}"));
+                validationResults.Add(new ValidationResult($"Не удалось создать экземпляр документа {documentType.Name}. " +
+                    $"Ошибка: {exception.Message}"));
 
                 return null;
             }
 
-            if (documentInstance is not IListDependencySchemaProvider schemaProvider)
+            if (documentInstance is not IListConfigurationProvider configurationProvider)
             {
-                validationResults.Add(new ValidationResult($"Документ {documentType.Name} не предоставляет схему " +
-                    $"зависимостей списков"));
+                validationResults.Add(new ValidationResult($"Документ {documentType.Name} не предоставляет конфигурацию списков"));
 
                 return null;
             }
 
-            var schema = schemaProvider.GetListDependencySchema();
-
-            if (schema is null)
-            {
-                validationResults.Add(new ValidationResult($"Документ {documentType.Name} вернул пустую схему " +
-                    $"зависимостей списков."));
-
-                return null;
-            }
-
-            return schema;
+            return configurationProvider;
         }
 
-        private static void ValidateSchemaRules(ListDependencySchema schema, Dictionary<string, PropertyInfo> propertiesByName,
-            HashSet<string> attributeConnections, List<ValidationResult> validationResults)
+        private static void ValidateCatalog(DocumentListCatalog catalog, Dictionary<string, PropertyInfo> propertiesByName, List<ValidationResult> validationResults)
+        {
+            foreach (var listPair in catalog.ListsByFieldName)
+            {
+                var fieldName = listPair.Key;
+                var listDefinition = listPair.Value;
+
+                if (!propertiesByName.TryGetValue(fieldName, out var property))
+                {
+                    validationResults.Add(new ValidationResult($"В каталоге списков указано несуществующее поле {fieldName}"));
+
+                    continue;
+                }
+
+                if (property.GetCustomAttribute<ListConstraintAttribute>() is null)
+                {
+                    validationResults.Add(new ValidationResult($"Поле {fieldName} есть в каталоге списков, " +
+                            "но не имеет ListConstraintAttribute"));
+                }
+
+                if (!IsListOptionKeyProperty(property))
+                {
+                    validationResults.Add(new ValidationResult($"Поле {fieldName} должно иметь тип ListOptionKey?"));
+                }
+
+                if (listDefinition.Options.Count == 0)
+                {
+                    validationResults.Add(new ValidationResult($"список для поля {fieldName} не содержит вариантов"));
+                }
+            }
+
+            foreach (var propertyPair in propertiesByName)
+            {
+                var property = propertyPair.Value;
+
+                if (property.GetCustomAttribute<ListConstraintAttribute>() is null)
+                {
+                    continue;
+                }
+
+                if (!catalog.CotainsList(property.Name))
+                {
+                    validationResults.Add(new ValidationResult($"поле {property.Name} объявлено как список, но для него нет " +
+                        $"описания в каталоге"));
+                }
+            }
+        }
+
+        private static void ValidateSchemaRules(ListDependencySchema schema, DocumentListCatalog catalog, Dictionary<string,
+            PropertyInfo> propertiesByName, HashSet<string> attributeConnections, List<ValidationResult> validationResults)
         {
             var ruleKeys = new HashSet<string>();
 
             foreach (var rule in schema.Rules)
             {
-                var ruleKey = CreateRuleKey(rule.ChildFieldName, rule.ParentFieldName, rule.ParentFieldValue);
+                var ruleKey = CreateRuleKey(
+                    rule.ChildField,
+                    rule.ParentField,
+                    rule.ParentValueKey);
 
                 if (!ruleKeys.Add(ruleKey))
                 {
-                    validationResults.Add(new ValidationResult(
-                            $"В схеме зависимостей найдено повторяющееся правило: поле {rule.ChildFieldName} зависит от поля " +
-                            $"{rule.ParentFieldName} при значении {rule.ParentFieldValue}"));
+                    validationResults.Add(new ValidationResult("В схеме зависимостей найдено повторяющееся правило"));
 
                     continue;
                 }
 
                 ValidateSchemaConnectionExistsInAttributes(rule, attributeConnections, validationResults);
 
-                if (!propertiesByName.TryGetValue(rule.ChildFieldName, out var childProperty))
+                if (!propertiesByName.ContainsKey(rule.ChildField))
                 {
-                    validationResults.Add(new ValidationResult($"в схеме зависимостей указано несуществующее зависимое поле {rule.ChildFieldName}"));
+                    validationResults.Add(new ValidationResult($"В схеме зависимостей указано несуществующее зависимое поле{rule.ChildField}"));
 
                     continue;
                 }
 
-                if (!propertiesByName.TryGetValue(rule.ParentFieldName, out var parentProperty))
+                if (!propertiesByName.ContainsKey(rule.ParentField))
                 {
-                    validationResults.Add(new ValidationResult($"в схеме зависимостей указано несуществующее родительское поле {rule.ParentFieldName}"));
+                    validationResults.Add(new ValidationResult($"В схеме зависимостей указано несуществующее родительское " +
+                        $"поле {rule.ParentField}"));
 
                     continue;
                 }
 
-                var childListConstraint = childProperty.GetCustomAttribute<ListConstraintAttribute>();
-                var parentListConstraint = parentProperty.GetCustomAttribute<ListConstraintAttribute>();
-
-                if (childListConstraint is null)
+                if (!catalog.TryGetList(rule.ChildField, out var childList) || childList is null)
                 {
-                    validationResults.Add(new ValidationResult($"зависимое поле {rule.ChildFieldName} из схемы не имеет " +
-                        $"ListConstraintAttribute"));
+                    validationResults.Add(new ValidationResult($"Для зависимого поля {rule.ChildField} нет списка в каталоге"));
 
                     continue;
                 }
 
-                if (parentListConstraint is null)
+                if (!catalog.TryGetList(rule.ParentField, out var parentList) || parentList is null)
                 {
-                    validationResults.Add(new ValidationResult($"родительское поле {rule.ParentFieldName} из схемы не имеет " +
-                        $"ListConstraintAttribute"));
+                    validationResults.Add(new ValidationResult($"Для родительского поля {rule.ParentField} нет списка в каталоге"));
 
                     continue;
                 }
 
-                ValidateParentFieldNameValue(rule, parentListConstraint, validationResults);
+                if (!parentList.ContainsKey(rule.ParentValueKey))
+                {
+                    validationResults.Add(new ValidationResult($"Ключ {rule.ParentValueKey} не найден среди вариантов " +
+                            $"родительского поля {rule.ParentField}"));
+                }
 
-                ValidateAllowedChildValues(rule, childListConstraint, validationResults);
+                foreach (var allowedChildValueKey in rule.AllowedChildValueKeys)
+                {
+                    if (!childList.ContainsKey(allowedChildValueKey))
+                    {
+                        validationResults.Add(new ValidationResult($"Ключ {allowedChildValueKey} из правила зависимости не найден " +
+                                $"среди вариантов поля {rule.ChildField}"));
+                    }
+                }
             }
         }
 
         private static void ValidateSchemaConnectionExistsInAttributes(ListDependencyRule rule, HashSet<string> attributeConnections,
             List<ValidationResult> validationResults)
         {
-            var connectionKey = CreateConnectionKey(rule.ChildFieldName, rule.ParentFieldName);
+            var connectionKey = CreateConnectionKey(rule.ChildField, rule.ParentField);
 
             if (!attributeConnections.Contains(connectionKey))
             {
-                validationResults.Add(new ValidationResult($"в схеме есть связь {rule.ParentFieldName} → {rule.ChildFieldName}, " +
-                        "но она не объявлена через ListDependencyAttribute"));
+                validationResults.Add(new ValidationResult($"В схеме есть связь {rule.ParentField} → {rule.ChildField}, " +
+                        "но она не объявлена через ListDependencyAttribute."));
             }
         }
 
@@ -231,61 +314,37 @@ namespace MADOC.Domain.Validation.ListDependencies
             {
                 var parts = connectionKey.Split('|');
 
-                var ChildFieldName = parts[0];
-                var ParentFieldName = parts[1];
+                var childField = parts[0];
+                var parentField = parts[1];
 
-                if (!schema.HasRulesForConnection(ChildFieldName, ParentFieldName))
+                if (!schema.HasRulesForConnection(childField, parentField))
                 {
-                    validationResults.Add(new ValidationResult($"поле {ChildFieldName} объявило зависимость от поля {ParentFieldName} " +
-                            "через ListDependencyAttribute, но в схеме зависимостей нет правил для этой связи"));
+                    validationResults.Add(new ValidationResult($"Поле {childField} объявило зависимость от поля {parentField}, " +
+                            "но в схеме зависимостей нет правил для этой связи"));
                 }
             }
         }
 
-        private static void ValidateParentFieldNameValue(ListDependencyRule rule, ListConstraintAttribute parentListConstraint,
-            List<ValidationResult> validationResults)
+        private static bool IsListOptionKeyProperty(PropertyInfo property)
         {
-            if (!ContainsValue(parentListConstraint.AllowedValues, rule.ParentFieldValue))
+            if (property.PropertyType == typeof(ListOptionKey))
             {
-                validationResults.Add(new ValidationResult($"значение {rule.ParentFieldValue} не найдено среди допустимых значений " +
-                        $"родительского поля {rule.ParentFieldName}"));
+                return true;
             }
+
+            var nullableType = Nullable.GetUnderlyingType(property.PropertyType);
+
+            return nullableType == typeof(ListOptionKey);
         }
 
-        private static void ValidateAllowedChildValues(ListDependencyRule rule, ListConstraintAttribute childListConstraint,
-            List<ValidationResult> validationResults)
+        private static void AddGraphEdge(Dictionary<string, HashSet<string>> graph, string parentField, string childField)
         {
-            foreach (var allowedChildValue in rule.AllowedChildFieldValues)
+            if (!graph.ContainsKey(parentField))
             {
-                if (!ContainsValue(childListConstraint.AllowedValues, allowedChildValue))
-                {
-                    validationResults.Add(new ValidationResult($"значение {allowedChildValue} из правила зависимости не найдено " +
-                            $"среди допустимых значений поля {rule.ChildFieldName}"));
-                }
-            }
-        }
-
-        private static bool ContainsValue(IReadOnlyList<string> values, string value)
-        {
-            foreach (var currentValue in values)
-            {
-                if (currentValue == value)
-                {
-                    return true;
-                }
+                graph[parentField] = new HashSet<string>();
             }
 
-            return false;
-        }
-
-        private static void AddGraphEdge(Dictionary<string, HashSet<string>> graph, string ParentFieldName, string ChildFieldName)
-        {
-            if (!graph.ContainsKey(ParentFieldName))
-            {
-                graph[ParentFieldName] = new HashSet<string>();
-            }
-
-            graph[ParentFieldName].Add(ChildFieldName);
+            graph[parentField].Add(childField);
         }
 
         private static bool ContainsCycle(Dictionary<string, HashSet<string>> graph)
@@ -335,14 +394,14 @@ namespace MADOC.Domain.Validation.ListDependencies
             return false;
         }
 
-        private static string CreateConnectionKey(string ChildFieldName, string ParentFieldName)
+        private static string CreateConnectionKey(string childField, string parentField)
         {
-            return $"{ChildFieldName}|{ParentFieldName}";
+            return $"{childField}|{parentField}";
         }
 
-        private static string CreateRuleKey(string ChildFieldName, string ParentFieldName, string ParentFieldNameValue)
+        private static string CreateRuleKey(string childField, string parentField, ListOptionKey parentValueKey)
         {
-            return $"{ChildFieldName}|{ParentFieldName}|{ParentFieldNameValue}";
+            return $"{childField}|{parentField}|{parentValueKey}";
         }
     }
 }
