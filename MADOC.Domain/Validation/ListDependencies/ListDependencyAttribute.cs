@@ -41,11 +41,6 @@ namespace MADOC.Domain.Validation.ListDependencies
                 return ValidationResult.Success;
             }
 
-            if (value is string currentStringValue && string.IsNullOrWhiteSpace(currentStringValue))
-            {
-                return ValidationResult.Success;
-            }
-
             if (!ListOptionKeyConverter.TryConvert(value, out var currentValueKey))
             {
                 return new ValidationResult($"значение поля {validationContext.DisplayName} должно быть ключом варианта списка");
@@ -80,11 +75,6 @@ namespace MADOC.Domain.Validation.ListDependencies
                 var parentValue = parentProperty.GetValue(document);
 
                 if (parentValue is null)
-                {
-                    return ValidationResult.Success;
-                }
-
-                if (parentValue is string parentStringValue && string.IsNullOrWhiteSpace(parentStringValue))
                 {
                     return ValidationResult.Success;
                 }
