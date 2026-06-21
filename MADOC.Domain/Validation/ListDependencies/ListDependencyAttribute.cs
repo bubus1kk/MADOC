@@ -36,6 +36,11 @@ namespace MADOC.Domain.Validation.ListDependencies
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
+            if (value is null)
+            {
+                return ValidationResult.Success;
+            }
+
             if (value is string currentStringValue && string.IsNullOrWhiteSpace(currentStringValue))
             {
                 return ValidationResult.Success;
@@ -73,6 +78,11 @@ namespace MADOC.Domain.Validation.ListDependencies
                 }
 
                 var parentValue = parentProperty.GetValue(document);
+
+                if (parentValue is null)
+                {
+                    return ValidationResult.Success;
+                }
 
                 if (parentValue is string parentStringValue && string.IsNullOrWhiteSpace(parentStringValue))
                 {
