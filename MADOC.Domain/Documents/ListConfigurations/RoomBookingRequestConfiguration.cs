@@ -3,7 +3,7 @@ using MADOC.Domain.Validation.Lists;
 
 namespace MADOC.Domain.Documents.ListConfigurations
 {
-    internal class RoomBookingRequestConfiguration
+    public static class RoomBookingRequestConfiguration
     {
         private const string KeyPrefix = "room_booking_request";
 
