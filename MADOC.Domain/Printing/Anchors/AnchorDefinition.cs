@@ -1,6 +1,6 @@
 ﻿namespace MADOC.Domain.Printing.Anchors;
 
-public sealed class PrintAnchorDefinition<TDocument> where TDocument : class
+public sealed class AnchorDefinition<TDocument> where TDocument : class
 {
     private readonly Func<TDocument, object?> getValueFromDocument;
 
@@ -8,7 +8,7 @@ public sealed class PrintAnchorDefinition<TDocument> where TDocument : class
 
     public string FieldName { get; }
 
-    public PrintAnchorDefinition(AnchorKey key, string fieldName, Func<TDocument, object?> getValueFromDocument)
+    public AnchorDefinition(AnchorKey key, string fieldName, Func<TDocument, object?> getValueFromDocument)
     {
         ValidateFieldName(fieldName);
         ArgumentNullException.ThrowIfNull(getValueFromDocument);
