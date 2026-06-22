@@ -5,11 +5,11 @@ namespace MADOC.Domain.Printing.Anchors;
 public abstract class PrintAnchorProfile<TDocument>
     where TDocument : class
 {
-    private readonly Lazy<IReadOnlyDictionary<AnchorKey, PrintAnchorDefinition<TDocument>>> anchorsByKey;
+    private readonly Lazy<IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>> anchorsByKey;
 
     protected PrintAnchorProfile()
     {
-        anchorsByKey = new Lazy<IReadOnlyDictionary<AnchorKey, PrintAnchorDefinition<TDocument>>>(
+        anchorsByKey = new Lazy<IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>>(
             BuildAnchors);
     }
 
@@ -21,7 +21,7 @@ public abstract class PrintAnchorProfile<TDocument>
         }
     }
 
-    public IReadOnlyCollection<PrintAnchorDefinition<TDocument>> Anchors
+    public IReadOnlyCollection<AnchorDefinition<TDocument>> Anchors
     {
         get
         {
@@ -41,12 +41,12 @@ public abstract class PrintAnchorProfile<TDocument>
 
     public bool TryGet(
         AnchorKey key,
-        out PrintAnchorDefinition<TDocument>? definition)
+        out AnchorDefinition<TDocument>? definition)
     {
         return anchorsByKey.Value.TryGetValue(key, out definition);
     }
 
-    public PrintAnchorDefinition<TDocument> GetRequired(AnchorKey key)
+    public AnchorDefinition<TDocument> GetRequired(AnchorKey key)
     {
         if (!anchorsByKey.Value.TryGetValue(key, out var definition))
         {
@@ -57,14 +57,14 @@ public abstract class PrintAnchorProfile<TDocument>
         return definition;
     }
 
-    public PrintAnchorDefinition<TDocument> GetRequired(string key)
+    public AnchorDefinition<TDocument> GetRequired(string key)
     {
         return GetRequired(new AnchorKey(key));
     }
 
-    protected abstract void Configure(PrintAnchorProfileBuilder<TDocument> builder);
+    protected abstract void Configure(AnchorProfileBuilder<TDocument> builder);
 
-    private IReadOnlyDictionary<AnchorKey, PrintAnchorDefinition<TDocument>> BuildAnchors()
+    private IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>> BuildAnchors()
     {
         if (string.IsNullOrWhiteSpace(Prefix))
         {
@@ -72,7 +72,7 @@ public abstract class PrintAnchorProfile<TDocument>
                 $"Префикс профиля печатных якорей для документа {typeof(TDocument).Name} не может быть пустым.");
         }
 
-        var builder = new PrintAnchorProfileBuilder<TDocument>(Prefix);
+        var builder = new AnchorProfileBuilder<TDocument>(Prefix);
 
         Configure(builder);
 
@@ -84,7 +84,7 @@ public abstract class PrintAnchorProfile<TDocument>
                 $"Профиль печатных якорей для документа {typeof(TDocument).Name} не содержит ни одного якоря.");
         }
 
-        var dictionary = new Dictionary<AnchorKey, PrintAnchorDefinition<TDocument>>();
+        var dictionary = new Dictionary<AnchorKey, AnchorDefinition<TDocument>>();
 
         foreach (var anchor in anchors)
         {
@@ -95,6 +95,6 @@ public abstract class PrintAnchorProfile<TDocument>
             }
         }
 
-        return new ReadOnlyDictionary<AnchorKey, PrintAnchorDefinition<TDocument>>(dictionary);
+        return new ReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>(dictionary);
     }
 }
