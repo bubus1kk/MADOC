@@ -3,7 +3,8 @@ using System.Reflection;
 
 namespace MADOC.Domain.Printing.Anchors;
 
-public sealed class AnchorProfileBuilder<TDocument> where TDocument : class
+public sealed class AnchorProfileBuilder<TDocument>
+    where TDocument : class
 {
     private readonly string prefix;
 
@@ -15,20 +16,19 @@ public sealed class AnchorProfileBuilder<TDocument> where TDocument : class
     {
         if (string.IsNullOrWhiteSpace(prefix))
         {
-            throw new ArgumentException("Префикс якорей не может быть пустым", nameof(prefix));
+            throw new ArgumentException(
+                "Префикс якорей не может быть пустым.",
+                nameof(prefix));
         }
 
         this.prefix = prefix;
     }
 
-    public AnchorProfileBuilder<TDocument> Map<TValue>(Expression<Func<TDocument, TValue>> propertyExpression)
+    public AnchorProfileBuilder<TDocument> Map<TValue>(
+        Expression<Func<TDocument, TValue>> propertyExpression)
     {
         ArgumentNullException.ThrowIfNull(propertyExpression);
-
-        if (isBuilt)
-        {
-            throw new InvalidOperationException("Нельзя добавлять якоря после завершения сборки профиля");
-        }
+        EnsureCanAddAnchor();
 
         var propertyInfo = GetPropertyInfo(propertyExpression);
         var anchorKey = AnchorNameGenerator.Create(prefix, propertyInfo);
@@ -37,14 +37,34 @@ public sealed class AnchorProfileBuilder<TDocument> where TDocument : class
 
         var compiledGetter = propertyExpression.Compile();
 
-        object? ValueGetter(TDocument document)
+        object? GetValueFromDocument(TDocument document)
         {
             return compiledGetter(document);
         }
 
-        var definition = new AnchorDefinition<TDocument>(anchorKey, propertyInfo.Name, ValueGetter);
+        AddAnchor(anchorKey, propertyInfo.Name, GetValueFromDocument);
 
-        anchors.Add(definition);
+        return this;
+    }
+
+    internal AnchorProfileBuilder<TDocument> Map(PropertyInfo propertyInfo)
+    {
+        ArgumentNullException.ThrowIfNull(propertyInfo);
+        EnsureCanAddAnchor();
+        ValidateProperty(propertyInfo);
+
+        var anchorKey = AnchorNameGenerator.Create(prefix, propertyInfo);
+
+        EnsureUniqueAnchor(anchorKey, propertyInfo.Name);
+
+        object? GetValueFromDocument(TDocument document)
+        {
+            ArgumentNullException.ThrowIfNull(document);
+
+            return propertyInfo.GetValue(document);
+        }
+
+        AddAnchor(anchorKey, propertyInfo.Name, GetValueFromDocument);
 
         return this;
     }
@@ -56,35 +76,64 @@ public sealed class AnchorProfileBuilder<TDocument> where TDocument : class
         return anchors.ToArray();
     }
 
-    private void EnsureUniqueAnchor(AnchorKey key, string fieldName)
+    private void AddAnchor(
+        AnchorKey key,
+        string fieldName,
+        Func<TDocument, object?> getValueFromDocument)
+    {
+        var definition = new AnchorDefinition<TDocument>(
+            key,
+            fieldName,
+            getValueFromDocument);
+
+        anchors.Add(definition);
+    }
+
+    private void EnsureCanAddAnchor()
+    {
+        if (isBuilt)
+        {
+            throw new InvalidOperationException(
+                "Нельзя добавлять якоря после завершения сборки профиля.");
+        }
+    }
+
+    private void EnsureUniqueAnchor(
+        AnchorKey key,
+        string fieldName)
     {
         foreach (var anchor in anchors)
         {
             if (anchor.Key == key)
             {
-                throw new InvalidOperationException($"Якорь {key} уже зарегистрирован");
+                throw new InvalidOperationException(
+                    $"Якорь {key} уже зарегистрирован.");
             }
 
             if (anchor.FieldName == fieldName)
             {
-                throw new InvalidOperationException($"Поле {fieldName} уже зарегистрировано как печатный якорь");
+                throw new InvalidOperationException(
+                    $"Поле {fieldName} уже зарегистрировано как печатный якорь.");
             }
         }
     }
 
-    private static PropertyInfo GetPropertyInfo<TValue>(Expression<Func<TDocument, TValue>> propertyExpression)
+    private static PropertyInfo GetPropertyInfo<TValue>(
+        Expression<Func<TDocument, TValue>> propertyExpression)
     {
         var body = RemoveConvertExpression(propertyExpression.Body);
 
         if (body is not MemberExpression memberExpression)
         {
-            throw new ArgumentException("Выражение должно указывать напрямую на свойство документа",
+            throw new ArgumentException(
+                "Выражение должно указывать напрямую на свойство документа.",
                 nameof(propertyExpression));
         }
 
         if (memberExpression.Member is not PropertyInfo propertyInfo)
         {
-            throw new ArgumentException("Выражение должно указывать на свойство, а не на поле или метод",
+            throw new ArgumentException(
+                "Выражение должно указывать на свойство, а не на поле или метод.",
                 nameof(propertyExpression));
         }
 
@@ -92,22 +141,47 @@ public sealed class AnchorProfileBuilder<TDocument> where TDocument : class
 
         if (sourceExpression is not ParameterExpression)
         {
-            throw new ArgumentException("Выражение должно указывать только на прямое свойство документа, " +
-                "вложенные свойства и вычисления нужно оформлять как кастомные поля генератора формы",
+            throw new ArgumentException(
+                "Выражение должно указывать только на прямое свойство документа. " +
+                "Вложенные свойства и вычисления нужно передавать в HTML-генератор как сгенерированные поля.",
                 nameof(propertyExpression));
         }
 
-        if (propertyInfo.GetMethod is null)
-        {
-            throw new ArgumentException($"Свойство {propertyInfo.Name} не имеет геттер", nameof(propertyExpression));
-        }
+        ValidateProperty(propertyInfo);
 
         return propertyInfo;
     }
 
+    private static void ValidateProperty(PropertyInfo propertyInfo)
+    {
+        if (propertyInfo.GetMethod is null)
+        {
+            throw new ArgumentException(
+                $"Свойство {propertyInfo.Name} не имеет getter.",
+                nameof(propertyInfo));
+        }
+
+        if (propertyInfo.GetIndexParameters().Length > 0)
+        {
+            throw new ArgumentException(
+                $"Индексируемое свойство {propertyInfo.Name} нельзя использовать как печатный якорь.",
+                nameof(propertyInfo));
+        }
+
+        if (propertyInfo.DeclaringType is not null &&
+            !propertyInfo.DeclaringType.IsAssignableFrom(typeof(TDocument)))
+        {
+            throw new ArgumentException(
+                $"Свойство {propertyInfo.Name} не относится к документу {typeof(TDocument).Name}.",
+                nameof(propertyInfo));
+        }
+    }
+
     private static Expression? RemoveConvertExpression(Expression? expression)
     {
-        while (expression is UnaryExpression unaryExpression && (unaryExpression.NodeType == ExpressionType.Convert || unaryExpression.NodeType == ExpressionType.ConvertChecked))
+        while (expression is UnaryExpression unaryExpression &&
+               (unaryExpression.NodeType == ExpressionType.Convert ||
+                unaryExpression.NodeType == ExpressionType.ConvertChecked))
         {
             expression = unaryExpression.Operand;
         }
