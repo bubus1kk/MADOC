@@ -1,24 +1,33 @@
 ﻿using System.Collections.ObjectModel;
+using System.Reflection;
 
 namespace MADOC.Domain.Printing.Anchors;
 
-public abstract class PrintAnchorProfile<TDocument>
+public class PrintAnchorProfile<TDocument>
     where TDocument : class
 {
     private readonly Lazy<IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>> anchorsByKey;
 
-    protected PrintAnchorProfile()
+    public string Prefix { get; }
+
+    public PrintAnchorProfile()
+        : this(AnchorNameGenerator.CreateDocumentPrefix(typeof(TDocument)))
     {
-        anchorsByKey = new Lazy<IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>>(
-            BuildAnchors);
     }
 
-    public virtual string Prefix
+    public PrintAnchorProfile(string prefix)
     {
-        get
+        if (string.IsNullOrWhiteSpace(prefix))
         {
-            return AnchorNameGenerator.CreateDocumentPrefix(typeof(TDocument));
+            throw new ArgumentException(
+                $"Префикс профиля печатных якорей для документа {typeof(TDocument).Name} не может быть пустым.",
+                nameof(prefix));
         }
+
+        Prefix = prefix;
+
+        anchorsByKey = new Lazy<IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>>(
+            BuildAnchors);
     }
 
     public IReadOnlyCollection<AnchorDefinition<TDocument>> Anchors
@@ -62,19 +71,33 @@ public abstract class PrintAnchorProfile<TDocument>
         return GetRequired(new AnchorKey(key));
     }
 
-    protected abstract void Configure(AnchorProfileBuilder<TDocument> builder);
+    protected virtual IReadOnlyList<PropertyInfo> GetPropertiesForAnchors()
+    {
+        var properties = typeof(TDocument).GetProperties(
+            BindingFlags.Instance | BindingFlags.Public);
+
+        var result = new List<PropertyInfo>();
+
+        foreach (var property in properties)
+        {
+            if (CanUsePropertyAsAnchor(property))
+            {
+                result.Add(property);
+            }
+        }
+
+        return result;
+    }
 
     private IReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>> BuildAnchors()
     {
-        if (string.IsNullOrWhiteSpace(Prefix))
-        {
-            throw new InvalidOperationException(
-                $"Префикс профиля печатных якорей для документа {typeof(TDocument).Name} не может быть пустым.");
-        }
-
         var builder = new AnchorProfileBuilder<TDocument>(Prefix);
+        var properties = GetPropertiesForAnchors();
 
-        Configure(builder);
+        foreach (var property in properties)
+        {
+            builder.Map(property);
+        }
 
         var anchors = builder.Build();
 
@@ -96,5 +119,25 @@ public abstract class PrintAnchorProfile<TDocument>
         }
 
         return new ReadOnlyDictionary<AnchorKey, AnchorDefinition<TDocument>>(dictionary);
+    }
+
+    private static bool CanUsePropertyAsAnchor(PropertyInfo property)
+    {
+        if (property.GetMethod is null)
+        {
+            return false;
+        }
+
+        if (!property.GetMethod.IsPublic)
+        {
+            return false;
+        }
+
+        if (property.GetIndexParameters().Length > 0)
+        {
+            return false;
+        }
+
+        return true;
     }
 }
