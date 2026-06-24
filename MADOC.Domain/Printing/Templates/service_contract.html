@@ -66,19 +66,14 @@
             margin: 0 0 12pt;
         }
 
-        .row.compact {
-            grid-template-columns:
-                var(--label-column-width) minmax(0, 1fr)
-                fit-content(48mm) minmax(0, var(--tail-field-width));
-            column-gap: 5pt;
-        }
+            .row.compact {
+                grid-template-columns: var(--label-column-width) minmax(0, 1fr) fit-content(48mm) minmax(0, var(--tail-field-width));
+                column-gap: 5pt;
+            }
 
-        .row.compact.triple {
-            grid-template-columns:
-                var(--triple-label-column-width) minmax(0, 1fr)
-                fit-content(32mm) minmax(0, var(--triple-field-width))
-                fit-content(32mm) minmax(0, var(--triple-field-width));
-        }
+                .row.compact.triple {
+                    grid-template-columns: var(--triple-label-column-width) minmax(0, 1fr) fit-content(32mm) minmax(0, var(--triple-field-width)) fit-content(32mm) minmax(0, var(--triple-field-width));
+                }
 
         .signature .row.compact {
             grid-template-columns: max-content minmax(0, 1fr);
@@ -99,21 +94,21 @@
             overflow-wrap: anywhere;
         }
 
-        .line.short {
-            width: auto;
-        }
+            .line.short {
+                width: auto;
+            }
 
-        .line.medium {
-            width: auto;
-        }
+            .line.medium {
+                width: auto;
+            }
 
-        .line.multiline {
-            display: block;
-            width: 100%;
-            min-height: 56pt;
-            margin-top: 8pt;
-            line-height: 1.35;
-        }
+            .line.multiline {
+                display: block;
+                width: 100%;
+                min-height: 56pt;
+                margin-top: 8pt;
+                line-height: 1.35;
+            }
 
         .text {
             margin: 18pt 0;
@@ -141,85 +136,85 @@
     </style>
 </head>
 <body>
-<main class="page" data-template="service_contract" data-document="ServiceContractDocument">
-    <div class="form-code">Форма MADOC-SC1</div>
+    <main class="page" data-template="service_contract" data-document="ServiceContractDocument">
+        <div class="form-code">Форма MADOC-SC1</div>
 
-    <h1>Заявка на подготовку договора</h1>
+        <h1>Заявка на подготовку договора</h1>
 
-    <div class="row">
-        <span class="label">ФИО ответственного</span>
-        <span class="line" data-anchor="service_contract.responsible_full_name">{{service_contract.responsible_full_name}}</span>
-    </div>
-
-    <div class="row">
-        <span class="label">Наименование контрагента</span>
-        <span class="line" data-anchor="service_contract.contractor_name">{{service_contract.contractor_name}}</span>
-    </div>
-
-    <h2>Сведения о договоре</h2>
-
-    <div class="row">
-        <span class="label">Тип контрагента</span>
-        <span class="line" data-anchor="service_contract.contractor_type">{{service_contract.contractor_type}}</span>
-    </div>
-
-    <div class="row">
-        <span class="label">Тип договора</span>
-        <span class="line" data-anchor="service_contract.contract_type">{{service_contract.contract_type}}</span>
-    </div>
-
-    <div class="text">
-        <span class="label">Предмет договора:</span>
-        <span class="line multiline" data-anchor="service_contract.contract_subject">{{service_contract.contract_subject}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Сумма договора</span>
-        <span class="line medium" data-anchor="service_contract.contract_amount">{{service_contract.contract_amount}}</span>
-        <span class="label">период действия</span>
-        <span class="line medium" data-anchor="service_contract.contract_period">{{service_contract.contract_period}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">График оплаты</span>
-        <span class="line medium" data-anchor="service_contract.payment_schedule">{{service_contract.payment_schedule}}</span>
-        <span class="label">способ подписания</span>
-        <span class="line medium" data-anchor="service_contract.signing_method">{{service_contract.signing_method}}</span>
-    </div>
-
-    <h2>Параметры обработки</h2>
-
-    <div class="row compact">
-        <span class="label">Без оплаты</span>
-        <span class="line short" data-anchor="service_contract.is_free_contract">{{service_contract.is_free_contract}}</span>
-        <span class="label">электронное подписание</span>
-        <span class="line short" data-anchor="service_contract.uses_electronic_signature">{{service_contract.uses_electronic_signature}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Длительность договора</span>
-        <span class="line short" data-anchor="service_contract.contract_duration_days">{{service_contract.contract_duration_days}}</span>
-        <span class="label">дн.</span>
-        <span class="line"></span>
-    </div>
-
-    <div class="text">
-        <span class="label">Краткое описание договора:</span>
-        <span class="line multiline" data-anchor="service_contract.contract_summary">{{service_contract.contract_summary}}</span>
-    </div>
-
-    <p class="text">Прошу подготовить договор на основании указанных сведений и выбранных параметров согласования.</p>
-
-    <div class="signature">
-        <span></span>
-        <div>
-            <div class="row compact">
-                <span class="label">Подпись:</span>
-                <span class="line"></span>
-            </div>
-            <div class="signature-line"></div>
+        <div class="row">
+            <span class="label">ФИО ответственного</span>
+            <span class="line" data-anchor="service_contract.responsible_full_name">{{doc:service_contract.responsible_full_name}}</span>
         </div>
-    </div>
-</main>
+
+        <div class="row">
+            <span class="label">Наименование контрагента</span>
+            <span class="line" data-anchor="service_contract.contractor_name">{{doc:service_contract.contractor_name}}</span>
+        </div>
+
+        <h2>Сведения о договоре</h2>
+
+        <div class="row">
+            <span class="label">Тип контрагента</span>
+            <span class="line" data-anchor="service_contract.contractor_type">{{doc:service_contract.contractor_type}}</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Тип договора</span>
+            <span class="line" data-anchor="service_contract.contract_type">{{doc:service_contract.contract_type}}</span>
+        </div>
+
+        <div class="text">
+            <span class="label">Предмет договора:</span>
+            <span class="line multiline" data-anchor="service_contract.contract_subject">{{doc:service_contract.contract_subject}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Сумма договора</span>
+            <span class="line medium" data-anchor="service_contract.contract_amount">{{doc:service_contract.contract_amount}}</span>
+            <span class="label">период действия</span>
+            <span class="line medium" data-anchor="service_contract.contract_period">{{doc:service_contract.contract_period}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">График оплаты</span>
+            <span class="line medium" data-anchor="service_contract.payment_schedule">{{doc:service_contract.payment_schedule}}</span>
+            <span class="label">способ подписания</span>
+            <span class="line medium" data-anchor="service_contract.signing_method">{{doc:service_contract.signing_method}}</span>
+        </div>
+
+        <h2>Параметры обработки</h2>
+
+        <div class="row compact">
+            <span class="label">Без оплаты</span>
+            <span class="line short" data-anchor="service_contract.is_free_contract">{{doc:service_contract.is_free_contract}}</span>
+            <span class="label">электронное подписание</span>
+            <span class="line short" data-anchor="service_contract.uses_electronic_signature">{{doc:service_contract.uses_electronic_signature}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Длительность договора</span>
+            <span class="line short" data-anchor="service_contract.contract_duration_days">{{doc:service_contract.contract_duration_days}}</span>
+            <span class="label">дн.</span>
+            <span class="line"></span>
+        </div>
+
+        <div class="text">
+            <span class="label">Краткое описание договора:</span>
+            <span class="line multiline" data-anchor="service_contract.contract_summary">{{doc:service_contract.contract_summary}}</span>
+        </div>
+
+        <p class="text">Прошу подготовить договор на основании указанных сведений и выбранных параметров согласования.</p>
+
+        <div class="signature">
+            <span></span>
+            <div>
+                <div class="row compact">
+                    <span class="label">Подпись:</span>
+                    <span class="line"></span>
+                </div>
+                <div class="signature-line"></div>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

@@ -30,7 +30,7 @@ public readonly record struct AnchorKey
     {
         foreach (var character in value)
         {
-            if (char.IsLetterOrDigit(character))
+            if (IsLatinLetter(character) || char.IsDigit(character))
             {
                 continue;
             }
@@ -44,5 +44,10 @@ public readonly record struct AnchorKey
         }
 
         return true;
+    }
+
+    private static bool IsLatinLetter(char character)
+    {
+        return character is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
     }
 }

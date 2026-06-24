@@ -66,19 +66,14 @@
             margin: 0 0 12pt;
         }
 
-        .row.compact {
-            grid-template-columns:
-                var(--label-column-width) minmax(0, 1fr)
-                fit-content(48mm) minmax(0, var(--tail-field-width));
-            column-gap: 5pt;
-        }
+            .row.compact {
+                grid-template-columns: var(--label-column-width) minmax(0, 1fr) fit-content(48mm) minmax(0, var(--tail-field-width));
+                column-gap: 5pt;
+            }
 
-        .row.compact.triple {
-            grid-template-columns:
-                var(--triple-label-column-width) minmax(0, 1fr)
-                fit-content(32mm) minmax(0, var(--triple-field-width))
-                fit-content(32mm) minmax(0, var(--triple-field-width));
-        }
+                .row.compact.triple {
+                    grid-template-columns: var(--triple-label-column-width) minmax(0, 1fr) fit-content(32mm) minmax(0, var(--triple-field-width)) fit-content(32mm) minmax(0, var(--triple-field-width));
+                }
 
         .signature .row.compact {
             grid-template-columns: max-content minmax(0, 1fr);
@@ -99,21 +94,21 @@
             overflow-wrap: anywhere;
         }
 
-        .line.short {
-            width: auto;
-        }
+            .line.short {
+                width: auto;
+            }
 
-        .line.medium {
-            width: auto;
-        }
+            .line.medium {
+                width: auto;
+            }
 
-        .line.multiline {
-            display: block;
-            width: 100%;
-            min-height: 56pt;
-            margin-top: 8pt;
-            line-height: 1.35;
-        }
+            .line.multiline {
+                display: block;
+                width: 100%;
+                min-height: 56pt;
+                margin-top: 8pt;
+                line-height: 1.35;
+            }
 
         .text {
             margin: 18pt 0;
@@ -141,86 +136,86 @@
     </style>
 </head>
 <body>
-<main class="page" data-template="room_booking_request" data-document="RoomBookingRequestDocument">
-    <div class="form-code">Форма MADOC-RB1</div>
+    <main class="page" data-template="room_booking_request" data-document="RoomBookingRequestDocument">
+        <div class="form-code">Форма MADOC-RB1</div>
 
-    <h1>Заявка на бронирование аудитории</h1>
+        <h1>Заявка на бронирование аудитории</h1>
 
-    <div class="row">
-        <span class="label">ФИО организатора</span>
-        <span class="line" data-anchor="room_booking_request.organizer_full_name">{{room_booking_request.organizer_full_name}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Группа или подразделение</span>
-        <span class="line medium" data-anchor="room_booking_request.organizer_unit">{{room_booking_request.organizer_unit}}</span>
-        <span class="label">количество участников</span>
-        <span class="line short" data-anchor="room_booking_request.participants_count">{{room_booking_request.participants_count}}</span>
-    </div>
-
-    <h2>Сведения о мероприятии</h2>
-
-    <div class="row compact triple">
-        <span class="label">Дата мероприятия</span>
-        <span class="line short" data-anchor="room_booking_request.event_date">{{room_booking_request.event_date}}</span>
-        <span class="label">время начала</span>
-        <span class="line short" data-anchor="room_booking_request.start_time">{{room_booking_request.start_time}}</span>
-        <span class="label">окончания</span>
-        <span class="line short" data-anchor="room_booking_request.end_time">{{room_booking_request.end_time}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Формат мероприятия</span>
-        <span class="line medium" data-anchor="room_booking_request.event_format">{{room_booking_request.event_format}}</span>
-        <span class="label">длительность, ч.</span>
-        <span class="line short" data-anchor="room_booking_request.duration_hours">{{room_booking_request.duration_hours}}</span>
-    </div>
-
-    <div class="text">
-        <span class="label">Описание мероприятия:</span>
-        <span class="line multiline" data-anchor="room_booking_request.event_description">{{room_booking_request.event_description}}</span>
-    </div>
-
-    <h2>Параметры аудитории</h2>
-
-    <div class="row compact">
-        <span class="label">Корпус</span>
-        <span class="line medium" data-anchor="room_booking_request.building">{{room_booking_request.building}}</span>
-        <span class="label">тип аудитории</span>
-        <span class="line medium" data-anchor="room_booking_request.room_type">{{room_booking_request.room_type}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Аудитория</span>
-        <span class="line medium" data-anchor="room_booking_request.room">{{room_booking_request.room}}</span>
-        <span class="label">комплект оборудования</span>
-        <span class="line medium" data-anchor="room_booking_request.equipment_set">{{room_booking_request.equipment_set}}</span>
-    </div>
-
-    <div class="row compact">
-        <span class="label">Крупное мероприятие</span>
-        <span class="line short" data-anchor="room_booking_request.is_large_event">{{room_booking_request.is_large_event}}</span>
-        <span class="label">требуется оборудование</span>
-        <span class="line short" data-anchor="room_booking_request.requires_equipment">{{room_booking_request.requires_equipment}}</span>
-    </div>
-
-    <div class="text">
-        <span class="label">Краткое описание бронирования:</span>
-        <span class="line multiline" data-anchor="room_booking_request.booking_summary">{{room_booking_request.booking_summary}}</span>
-    </div>
-
-    <p class="text">Прошу забронировать указанное помещение и оборудование для проведения мероприятия.</p>
-
-    <div class="signature">
-        <span></span>
-        <div>
-            <div class="row compact">
-                <span class="label">Подпись:</span>
-                <span class="line"></span>
-            </div>
-            <div class="signature-line"></div>
+        <div class="row">
+            <span class="label">ФИО организатора</span>
+            <span class="line" data-anchor="room_booking_request.organizer_full_name">{{doc:room_booking_request.organizer_full_name}}</span>
         </div>
-    </div>
-</main>
+
+        <div class="row compact">
+            <span class="label">Группа или подразделение</span>
+            <span class="line medium" data-anchor="room_booking_request.organizer_unit">{{doc:room_booking_request.organizer_unit}}</span>
+            <span class="label">количество участников</span>
+            <span class="line short" data-anchor="room_booking_request.participants_count">{{doc:room_booking_request.participants_count}}</span>
+        </div>
+
+        <h2>Сведения о мероприятии</h2>
+
+        <div class="row compact triple">
+            <span class="label">Дата мероприятия</span>
+            <span class="line short" data-anchor="room_booking_request.event_date">{{doc:room_booking_request.event_date}}</span>
+            <span class="label">время начала</span>
+            <span class="line short" data-anchor="room_booking_request.start_time">{{doc:room_booking_request.start_time}}</span>
+            <span class="label">окончания</span>
+            <span class="line short" data-anchor="room_booking_request.end_time">{{doc:room_booking_request.end_time}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Формат мероприятия</span>
+            <span class="line medium" data-anchor="room_booking_request.event_format">{{doc:room_booking_request.event_format}}</span>
+            <span class="label">длительность, ч.</span>
+            <span class="line short" data-anchor="room_booking_request.duration_hours">{{doc:room_booking_request.duration_hours}}</span>
+        </div>
+
+        <div class="text">
+            <span class="label">Описание мероприятия:</span>
+            <span class="line multiline" data-anchor="room_booking_request.event_description">{{doc:room_booking_request.event_description}}</span>
+        </div>
+
+        <h2>Параметры аудитории</h2>
+
+        <div class="row compact">
+            <span class="label">Корпус</span>
+            <span class="line medium" data-anchor="room_booking_request.building">{{doc:room_booking_request.building}}</span>
+            <span class="label">тип аудитории</span>
+            <span class="line medium" data-anchor="room_booking_request.room_type">{{doc:room_booking_request.room_type}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Аудитория</span>
+            <span class="line medium" data-anchor="room_booking_request.room">{{doc:room_booking_request.room}}</span>
+            <span class="label">комплект оборудования</span>
+            <span class="line medium" data-anchor="room_booking_request.equipment_set">{{doc:room_booking_request.equipment_set}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Крупное мероприятие</span>
+            <span class="line short" data-anchor="room_booking_request.is_large_event">{{doc:room_booking_request.is_large_event}}</span>
+            <span class="label">требуется оборудование</span>
+            <span class="line short" data-anchor="room_booking_request.requires_equipment">{{doc:room_booking_request.requires_equipment}}</span>
+        </div>
+
+        <div class="text">
+            <span class="label">Краткое описание бронирования:</span>
+            <span class="line multiline" data-anchor="room_booking_request.booking_summary">{{doc:room_booking_request.booking_summary}}</span>
+        </div>
+
+        <p class="text">Прошу забронировать указанное помещение и оборудование для проведения мероприятия.</p>
+
+        <div class="signature">
+            <span></span>
+            <div>
+                <div class="row compact">
+                    <span class="label">Подпись:</span>
+                    <span class="line"></span>
+                </div>
+                <div class="signature-line"></div>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
