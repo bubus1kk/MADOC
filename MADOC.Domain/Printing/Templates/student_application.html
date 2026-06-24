@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Заявление студента</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 18mm 16mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #000;
+            background: #fff;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 14pt;
+            line-height: 1.25;
+        }
+
+        .page {
+            width: 174mm;
+            min-height: 260mm;
+            margin: 0 auto;
+        }
+
+        .form-code {
+            text-align: right;
+            font-weight: 700;
+            font-size: 12pt;
+            margin-bottom: 28pt;
+        }
+
+        h1 {
+            margin: 0 0 28pt;
+            text-align: center;
+            font-size: 16pt;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            margin: 22pt 0 14pt;
+            text-align: center;
+            font-size: 14pt;
+            line-height: 1.2;
+        }
+
+        :root {
+            --label-column-width: 48mm;
+            --triple-label-column-width: 39mm;
+            --tail-field-width: 34mm;
+            --triple-field-width: 25mm;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: var(--label-column-width) minmax(0, 1fr);
+            align-items: end;
+            column-gap: 6pt;
+            row-gap: 2pt;
+            margin: 0 0 12pt;
+        }
+
+        .row.compact {
+            grid-template-columns:
+                var(--label-column-width) minmax(0, 1fr)
+                fit-content(48mm) minmax(0, var(--tail-field-width));
+            column-gap: 5pt;
+        }
+
+        .row.compact.triple {
+            grid-template-columns:
+                var(--triple-label-column-width) minmax(0, 1fr)
+                fit-content(32mm) minmax(0, var(--triple-field-width))
+                fit-content(32mm) minmax(0, var(--triple-field-width));
+        }
+
+        .signature .row.compact {
+            grid-template-columns: max-content minmax(0, 1fr);
+        }
+
+        .label {
+            min-width: 0;
+            line-height: 1.15;
+        }
+
+        .line {
+            display: inline-block;
+            min-width: 0;
+            min-height: 18pt;
+            padding: 0 3pt 1pt;
+            border-bottom: 1px solid #000;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .line.short {
+            width: auto;
+        }
+
+        .line.medium {
+            width: auto;
+        }
+
+        .line.multiline {
+            display: block;
+            width: 100%;
+            min-height: 56pt;
+            margin-top: 8pt;
+            line-height: 1.35;
+        }
+
+        .text {
+            margin: 18pt 0;
+        }
+
+        .signature {
+            display: grid;
+            grid-template-columns: 1fr 60mm;
+            gap: 10mm;
+            align-items: end;
+            margin-top: 28pt;
+        }
+
+        .signature-line {
+            min-height: 20pt;
+            border-bottom: 1px solid #000;
+        }
+
+        @media print {
+            .page {
+                width: auto;
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="page" data-template="student_application" data-document="StudentApplicationDocument">
+    <div class="form-code">Форма MADOC-SA1</div>
+
+    <h1>Заявление студента</h1>
+
+    <div class="row">
+        <span class="label">ФИО студента</span>
+        <span class="line" data-anchor="student_application.full_name">{{student_application.full_name}}</span>
+    </div>
+
+    <div class="row compact triple">
+        <span class="label">Учебная группа</span>
+        <span class="line medium" data-anchor="student_application.group_name">{{student_application.group_name}}</span>
+        <span class="label">возраст</span>
+        <span class="line short" data-anchor="student_application.age">{{student_application.age}}</span>
+        <span class="label">дата рождения</span>
+        <span class="line short" data-anchor="student_application.birth_date">{{student_application.birth_date}}</span>
+    </div>
+
+    <h2>Сведения о заявлении</h2>
+
+    <div class="row">
+        <span class="label">Категория заявителя</span>
+        <span class="line" data-anchor="student_application.applicant_category">{{student_application.applicant_category}}</span>
+    </div>
+
+    <div class="row">
+        <span class="label">Тип заявления</span>
+        <span class="line" data-anchor="student_application.application_type">{{student_application.application_type}}</span>
+    </div>
+
+    <div class="row">
+        <span class="label">Подтип заявления</span>
+        <span class="line" data-anchor="student_application.application_subtype">{{student_application.application_subtype}}</span>
+    </div>
+
+    <div class="row">
+        <span class="label">Способ получения результата</span>
+        <span class="line" data-anchor="student_application.receive_method">{{student_application.receive_method}}</span>
+    </div>
+
+    <div class="row compact">
+        <span class="label">Период отсутствия</span>
+        <span class="line medium" data-anchor="student_application.absence_period">{{student_application.absence_period}}</span>
+        <span class="label">количество дней отсутствия</span>
+        <span class="line short" data-anchor="student_application.absence_days">{{student_application.absence_days}}</span>
+    </div>
+
+    <div class="row compact">
+        <span class="label">Нужна бумажная копия</span>
+        <span class="line short" data-anchor="student_application.need_paper_copy">{{student_application.need_paper_copy}}</span>
+        <span class="label">длительное отсутствие</span>
+        <span class="line short" data-anchor="student_application.is_long_absence">{{student_application.is_long_absence}}</span>
+    </div>
+
+    <div class="row">
+        <span class="label">Требуется бумажная обработка</span>
+        <span class="line" data-anchor="student_application.requires_paper_processing">{{student_application.requires_paper_processing}}</span>
+    </div>
+
+    <div class="row">
+        <span class="label">Дата и время подачи заявления</span>
+        <span class="line" data-anchor="student_application.submitted_at">{{student_application.submitted_at}}</span>
+    </div>
+
+    <div class="text">
+        <span class="label">Краткое описание заявления:</span>
+        <span class="line multiline" data-anchor="student_application.application_summary">{{student_application.application_summary}}</span>
+    </div>
+
+    <div class="text">
+        <span class="label">Комментарий:</span>
+        <span class="line multiline" data-anchor="student_application.comment">{{student_application.comment}}</span>
+    </div>
+
+    <p class="text">Прошу принять заявление и обработать его в соответствии с указанными параметрами.</p>
+
+    <div class="signature">
+        <span></span>
+        <div>
+            <div class="row compact">
+                <span class="label">Подпись:</span>
+                <span class="line"></span>
+            </div>
+            <div class="signature-line"></div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
