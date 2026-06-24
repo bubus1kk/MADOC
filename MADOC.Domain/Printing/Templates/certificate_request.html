@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заявка на получение справки</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            font-family: "Times New Roman", Times, serif;
+            background-color: #ffffff;
+        }
+
+        .document-container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 750px;
+            color: #000;
+            font-size: 17px;
+            line-height: 1.3;
+            transform-origin: top center;
+            transform: scale(min(1, calc(100vw / 756px)));
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .header-right {
+            text-align: right;
+            font-weight: bold;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+        }
+
+        .row {
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            white-space: nowrap;
+            margin-right: 5px;
+        }
+
+        .label-right {
+            white-space: nowrap;
+            margin-left: 5px;
+        }
+
+        .line {
+            flex-grow: 1;
+            border-bottom: 1px solid #000;
+            min-height: 1.1em;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        .fixed-line {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-height: 1.1em;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        .subtext {
+            text-align: center;
+            font-size: 13px;
+            margin-top: -15px;
+            margin-bottom: 15px;
+        }
+
+        .text-only-row {
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            margin-top: 24px;
+            margin-bottom: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .multiline-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 4.5em;
+            margin-bottom: 18px;
+        }
+
+        .multiline-rules {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            min-height: 4.5em;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .multiline-rule {
+            height: 1.5em;
+            border-bottom: 1px solid #000;
+            box-sizing: border-box;
+        }
+
+        .multiline-row {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            line-height: 1.5em;
+            min-height: 4.5em;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+            outline: none;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        .signatures-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 35px;
+        }
+
+        .signatures-label {
+            margin-right: 10px;
+            margin-top: -3px;
+        }
+
+        .signature-lines {
+            display: flex;
+            flex-direction: column;
+            width: 240px;
+        }
+
+        .signature-lines .line {
+            margin-bottom: 18px;
+            height: 18px;
+        }
+
+        .break-inside-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        @media print {
+            html,
+            body {
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            body {
+                display: block;
+                margin: 0;
+            }
+
+            .document-container {
+                transform: none !important;
+                max-width: none;
+                width: auto;
+                padding: 0;
+            }
+
+            .row,
+            .text-only-row,
+            .break-inside-avoid {
+                break-after: avoid;
+                page-break-after: avoid;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="document-container">
+        <div class="header-right">Форма MADOC-СЗ</div>
+
+        <h1>Заявка на получение справки</h1>
+
+        <div class="row">
+            <span class="label">ФИО заявителя</span>
+            <div class="line">{{ doc:certificate_request.requester_full_name }}</div>
+        </div>
+        <div class="subtext">(фамилия, имя, отчество заявителя)</div>
+
+        <div class="row">
+            <span class="label">Учебная группа</span>
+            <div class="line" style="flex-grow: 0.55;">{{ doc:certificate_request.requester_group }}</div>
+            <span class="label-right">количество экземпляров</span>
+            <div class="fixed-line" style="width: 70px;">{{ doc:certificate_request.copies_count }}</div>
+        </div>
+
+        <div class="section-title">Сведения о запрашиваемой справке</div>
+
+        <div class="row">
+            <span class="label">Тип справки</span>
+            <div class="line">{{ doc:certificate_request.certificate_type }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Назначение справки</span>
+            <div class="line">{{ doc:certificate_request.certificate_purpose }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Формат справки</span>
+            <div class="line">{{ doc:certificate_request.certificate_format }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Место получения</span>
+            <div class="line">{{ doc:certificate_request.receive_place }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Организация-получатель</span>
+            <div class="line">{{ doc:certificate_request.organization_name }}</div>
+        </div>
+        <div class="subtext">(указывается при необходимости)</div>
+
+        <div class="break-inside-avoid">
+            <div class="text-only-row">Краткое описание запрашиваемой справки:</div>
+            <div class="multiline-wrap">
+                <div class="multiline-rules" aria-hidden="true">
+                    <div class="multiline-rule"></div>
+                    <div class="multiline-rule"></div>
+                    <div class="multiline-rule"></div>
+                </div>
+                <div class="multiline-row">{{ doc:certificate_request.certificate_summary }}</div>
+            </div>
+        </div>
+
+        <div class="section-title">Параметры получения</div>
+
+        <div class="row">
+            <span class="label">Желаемая дата получения</span>
+            <div class="fixed-line" style="width: 160px;">{{ doc:certificate_request.desired_receive_date }}</div>
+            <span class="label-right">время</span>
+            <div class="fixed-line" style="width: 110px;">{{ doc:certificate_request.desired_receive_time }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Нужна печать</span>
+            <div class="fixed-line" style="width: 90px;">{{ doc:certificate_request.need_stamp }}</div>
+            <span class="label-right">требуется посещение учреждения</span>
+            <div class="fixed-line" style="width: 90px;">{{ doc:certificate_request.requires_office_visit }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Период обработки заявки</span>
+            <div class="line">{{ doc:certificate_request.processing_period }}</div>
+        </div>
+
+        <div class="row">
+            <span class="label">Количество дней обработки</span>
+            <div class="fixed-line" style="width: 90px;">{{ doc:certificate_request.processing_days }}</div>
+            <span class="label-right">дн.</span>
+            <div class="line" style="margin-left: 10px;"></div>
+        </div>
+
+        <div class="text-only-row" style="margin-top: 30px;">
+            Заявитель подтверждает корректность указанных данных и просит подготовить справку в выбранном формате.
+        </div>
+
+        <div class="signatures-container">
+            <div class="signatures-label">Подписи:</div>
+            <div class="signature-lines">
+                <div class="line"></div>
+                <div class="line"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
