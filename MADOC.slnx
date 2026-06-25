@@ -1,6 +1,9 @@
 <Solution>
-  <Project Path="MADOC.App/MADOC.App.csproj" Id="5818a43d-c940-4537-b4b5-7b7e0eb23503" />
-  <Project Path="MADOC.Domain/MADOC.Domain.csproj" Id="9dc2fb86-7548-4cb7-87d7-3971b7fc205a" />
-  <Project Path="MADOC.Infrastructure/MADOC.Infrastructure.csproj" Id="6e42eb36-443c-4f64-9f98-67bfccb48a52" />
-  <Project Path="MADOC.Tests/MADOC.Tests.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/MADOC.Domain.Core.Tests/MADOC.Domain.Core.Tests.csproj" />
+    <Project Path="tests/MADOC.PackageConsumption.Tests/MADOC.PackageConsumption.Tests.csproj" />
+    <Project Path="tests/MADOC.Printing.Html.Tests/MADOC.Printing.Html.Tests.csproj" />
+  </Folder>
+  <Project Path="MADOC.Domain.Core/MADOC.Domain.Core.csproj" Id="5e312707-b2a4-4cda-9966-f9c821ea1ee5" />
+  <Project Path="MADOC.Printing.Html/MADOC.Printing.Html.csproj" Id="70f48783-06c2-4601-8db4-147665b8402c" />
 </Solution>

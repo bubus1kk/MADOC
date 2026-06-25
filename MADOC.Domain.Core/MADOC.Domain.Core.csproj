@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<PackageId>MADOC.Domain.Core</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>MADOC</Authors>
+		<Company>MADOC</Company>
+		<Description>Core domain models, validation rules, list definitions and list dependencies for MADOC documents.</Description>
+		<PackageTags>MADOC;Domain;Documents;Validation;Lists</PackageTags>
+		<RepositoryUrl>https://github.com/bubus1kk/MADOC</RepositoryUrl>
+	</PropertyGroup>
+
+</Project>
