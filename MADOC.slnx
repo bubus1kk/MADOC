@@ -1,9 +1,9 @@
 <Solution>
   <Folder Name="/tests/">
     <Project Path="tests/MADOC.Domain.Core.Tests/MADOC.Domain.Core.Tests.csproj" />
-    <Project Path="tests/MADOC.PackageConsumption.Tests/MADOC.PackageConsumption.Tests.csproj" />
     <Project Path="tests/MADOC.Printing.Html.Tests/MADOC.Printing.Html.Tests.csproj" />
   </Folder>
+  <Project Path="MADOC.Application/MADOC.Application.csproj" />
   <Project Path="MADOC.Domain.Core/MADOC.Domain.Core.csproj" Id="5e312707-b2a4-4cda-9966-f9c821ea1ee5" />
   <Project Path="MADOC.Printing.Html/MADOC.Printing.Html.csproj" Id="70f48783-06c2-4601-8db4-147665b8402c" />
 </Solution>

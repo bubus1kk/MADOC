@@ -10,27 +10,23 @@ public sealed class DocumentTypeDescriptor
 
     public string TemplateFileName { get; }
 
-    public DocumentTypeDescriptor(
-        DocumentTypeKey key,
-        string displayName,
-        Type documentType,
-        string templateFileName)
+    public DocumentTypeDescriptor(DocumentTypeKey key,string displayName,Type documentType,string templateFileName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
         {
-            throw new ArgumentException("Отображаемое имя типа документа не может быть пустым.", nameof(displayName));
+            throw new ArgumentException("Отображаемое имя типа документа не может быть пустым", nameof(displayName));
         }
 
         ArgumentNullException.ThrowIfNull(documentType);
 
         if (!documentType.IsClass)
         {
-            throw new ArgumentException("Тип документа должен быть ссылочным типом.", nameof(documentType));
+            throw new ArgumentException("Тип документа должен быть ссылочным типом", nameof(documentType));
         }
 
         if (string.IsNullOrWhiteSpace(templateFileName))
         {
-            throw new ArgumentException("Имя HTML-шаблона не может быть пустым.", nameof(templateFileName));
+            throw new ArgumentException("Имя HTML-шаблона не может быть пустым", nameof(templateFileName));
         }
 
         Key = key;
