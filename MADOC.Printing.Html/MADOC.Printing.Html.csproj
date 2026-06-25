@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<PackageId>MADOC.Printing.Html</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>MADOC</Authors>
+		<Company>MADOC</Company>
+		<Description>HTML print form generation, print anchors and document value resolving for MADOC.</Description>
+		<PackageTags>MADOC;Printing;HTML;Anchors</PackageTags>
+		<RepositoryUrl>https://github.com/bubus1kk/MADOC</RepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\MADOC.Domain.Core\MADOC.Domain.Core.csproj" />
+	</ItemGroup>
+
+</Project>
