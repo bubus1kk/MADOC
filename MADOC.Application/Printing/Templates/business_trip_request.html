@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Заявка на командировку</title>
+    <link rel="stylesheet" href="Styles/business_trip_request.css">
+</head>
+<body>
+    <main class="page" data-template="business_trip_request" data-document="BusinessTripRequestDocument">
+        <div class="form-code">Форма MADOC-BT1</div>
+
+        <h1>Заявка на оформление командировки</h1>
+
+        <div class="row">
+            <span class="label">ФИО сотрудника</span>
+            <span class="line" data-anchor="business_trip_request.employee_full_name">{{doc:business_trip_request.employee_full_name}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Должность</span>
+            <span class="line medium" data-anchor="business_trip_request.position">{{doc:business_trip_request.position}}</span>
+            <span class="label">подразделение</span>
+            <span class="line medium" data-anchor="business_trip_request.department">{{doc:business_trip_request.department}}</span>
+        </div>
+
+        <h2>Сведения о командировке</h2>
+
+        <div class="row compact">
+            <span class="label">Период командировки</span>
+            <span class="line medium" data-anchor="business_trip_request.trip_period">{{doc:business_trip_request.trip_period}}</span>
+            <span class="label">количество дней</span>
+            <span class="line short" data-anchor="business_trip_request.trip_days">{{doc:business_trip_request.trip_days}}</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Город назначения</span>
+            <span class="line" data-anchor="business_trip_request.destination_city">{{doc:business_trip_request.destination_city}}</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Цель</span>
+            <span class="line" data-anchor="business_trip_request.purpose">{{doc:business_trip_request.purpose}}</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Направление</span>
+            <span class="line" data-anchor="business_trip_request.destination">{{doc:business_trip_request.destination}}</span>
+        </div>
+
+        <div class="row compact">
+            <span class="label">Вид транспорта</span>
+            <span class="line medium" data-anchor="business_trip_request.transport_type">{{doc:business_trip_request.transport_type}}</span>
+            <span class="label">проживание</span>
+            <span class="line medium" data-anchor="business_trip_request.accommodation">{{doc:business_trip_request.accommodation}}</span>
+        </div>
+
+        <div class="text">
+            <span class="label">Основание командировки:</span>
+            <span class="line multiline" data-anchor="business_trip_request.reason">{{doc:business_trip_request.reason}}</span>
+        </div>
+
+        <div class="text">
+            <span class="label">Краткое описание командировки:</span>
+            <span class="line multiline" data-anchor="business_trip_request.trip_summary">{{doc:business_trip_request.trip_summary}}</span>
+        </div>
+
+        <h2>Параметры обработки</h2>
+
+        <div class="row compact">
+            <span class="label">Международная командировка</span>
+            <span class="line short" data-anchor="business_trip_request.is_international_trip">{{doc:business_trip_request.is_international_trip}}</span>
+            <span class="label">требуется проживание</span>
+            <span class="line short" data-anchor="business_trip_request.requires_accommodation">{{doc:business_trip_request.requires_accommodation}}</span>
+        </div>
+
+        <p class="text">Прошу оформить командировочные документы на основании указанных сведений.</p>
+
+        <div class="signature">
+            <span></span>
+            <div>
+                <div class="row compact">
+                    <span class="label">Подпись:</span>
+                    <span class="line"></span>
+                </div>
+                <div class="signature-line"></div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
