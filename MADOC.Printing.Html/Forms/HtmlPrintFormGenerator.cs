@@ -4,7 +4,7 @@ using MADOC.Printing.Html.Anchors;
 
 namespace MADOC.Printing.Html.Forms;
 
-public sealed class HtmlPrintFormGenerator<TDocument>
+public class HtmlPrintFormGenerator<TDocument>
     where TDocument : class
 {
     private readonly PrintAnchorValueResolver<TDocument> documentValueResolver;
