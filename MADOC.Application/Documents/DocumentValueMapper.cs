@@ -58,8 +58,6 @@ public sealed class DocumentValueMapper
         }
 
         return DocumentMappingResult.Success();
-
-        return DocumentMappingResult.Success();
     }
 
     private static Dictionary<string, PropertyInfo> GetWritableProperties(Type documentType)
@@ -280,6 +278,11 @@ public sealed class DocumentValueMapper
 
     private static double ConvertToDouble(object value)
     {
+        if (value is string text)
+        {
+            return ParseDouble(text);
+        }
+
         if (value is JsonElement jsonElement)
         {
             if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetDouble(out var jsonNumber))
@@ -317,6 +320,11 @@ public sealed class DocumentValueMapper
 
     private static decimal ConvertToDecimal(object value)
     {
+        if (value is string text)
+        {
+            return ParseDecimal(text);
+        }
+
         if (value is JsonElement jsonElement)
         {
             if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetDecimal(out var jsonNumber))
