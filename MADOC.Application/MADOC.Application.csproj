@@ -11,4 +11,8 @@
     <ProjectReference Include="..\MADOC.Printing.Html\MADOC.Printing.Html.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Content Include="Printing\Templates\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>

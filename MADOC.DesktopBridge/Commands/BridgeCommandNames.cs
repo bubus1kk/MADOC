@@ -13,6 +13,4 @@ public static class BridgeCommandNames
     public const string ValidateDocument = "validateDocument";
 
     public const string GeneratePrintHtml = "generatePrintHtml";
-
-    public const string SaveTextFile = "saveTextFile";
 }
