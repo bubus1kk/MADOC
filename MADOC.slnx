@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/tests/">
     <Project Path="MADOC.Application.Tests/MADOC.Application.Tests.csproj" Id="9b33d6bb-ad74-4a1a-918c-51c231286a81" />
+    <Project Path="MADOC.DesktopBridge.Tests/MADOC.DesktopBridge.Tests.csproj" Id="7cc85f71-102a-4543-a529-92f386b18bfe" />
     <Project Path="tests/MADOC.Domain.Core.Tests/MADOC.Domain.Core.Tests.csproj" />
     <Project Path="tests/MADOC.Printing.Html.Tests/MADOC.Printing.Html.Tests.csproj" />
   </Folder>
