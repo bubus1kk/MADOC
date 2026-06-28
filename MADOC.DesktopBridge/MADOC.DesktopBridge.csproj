@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MADOC.Application\MADOC.Application.csproj" />
+    <ProjectReference Include="..\MADOC.Domain.Core\MADOC.Domain.Core.csproj" />
+    <ProjectReference Include="..\MADOC.Printing.Html\MADOC.Printing.Html.csproj" />
+  </ItemGroup>
+
+</Project>
