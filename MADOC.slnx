@@ -5,6 +5,7 @@
     <Project Path="tests/MADOC.Printing.Html.Tests/MADOC.Printing.Html.Tests.csproj" />
   </Folder>
   <Project Path="MADOC.Application/MADOC.Application.csproj" />
+  <Project Path="MADOC.DesktopBridge/MADOC.DesktopBridge.csproj" Id="3638bfd6-46cc-4ed7-ae54-dbe82b692eac" />
   <Project Path="MADOC.Domain.Core/MADOC.Domain.Core.csproj" Id="5e312707-b2a4-4cda-9966-f9c821ea1ee5" />
   <Project Path="MADOC.Printing.Html/MADOC.Printing.Html.csproj" Id="70f48783-06c2-4601-8db4-147665b8402c" />
 </Solution>
