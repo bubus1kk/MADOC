@@ -210,7 +210,7 @@ fn print_forms_directory(app: &AppHandle) -> Result<PathBuf, String> {
         .document_dir()
         .map_err(|error| format!("Не удалось определить папку документов: {error}"))?;
     let target_directory = documents_directory
-        .join("MADOC Concept")
+        .join("MADOC")
         .join("Печатные формы");
     fs::create_dir_all(&target_directory)
         .map_err(|error| format!("Не удалось создать папку печатных форм: {error}"))?;

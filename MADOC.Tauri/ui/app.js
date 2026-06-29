@@ -185,7 +185,7 @@
   function brandMarkup(showCaption = false) {
     return `
       <span class="brand" aria-label="MADOC">
-        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <img class="brand-logo" src="./assets/star.png" alt="" aria-hidden="true">
         <span class="brand-copy">
           <span class="brand-name">MADOC</span>
           ${showCaption ? '<span class="brand-caption">Новая визуальная концепция</span>' : ""}
@@ -1276,7 +1276,7 @@
           displayName: schema.displayName,
           templateFileName: null,
         };
-      document.title = `${schema.displayName} — MADOC Concept`;
+      document.title = `${schema.displayName} — MADOC`;
       renderDocumentForm();
     } catch (error) {
       renderFatalError("Форма не загрузилась", error);
@@ -1547,7 +1547,7 @@
     activeDescriptor = null;
     generatedHtml = "";
     draftValues = {};
-    document.title = "MADOC Concept — Документы";
+    document.title = "MADOC — Документы";
 
     if (pushHistory) {
       const homeUrl = demoMode
@@ -1573,7 +1573,7 @@
         documentName: "Заявка на справку",
         format: "html",
         fileName: "Заявка-на-справку.html",
-        filePath: "Документы/MADOC Concept/Печатные формы/Заявка-на-справку.html",
+        filePath: "Документы/MADOC/Печатные формы/Заявка-на-справку.html",
         createdAt: now - 45 * 60 * 1000,
       },
       {
@@ -1582,7 +1582,7 @@
         documentName: "Заявление студента",
         format: "html",
         fileName: "Заявление-студента.html",
-        filePath: "Документы/MADOC Concept/Печатные формы/Заявление-студента.html",
+        filePath: "Документы/MADOC/Печатные формы/Заявление-студента.html",
         createdAt: now - 2 * 24 * 60 * 60 * 1000,
       },
       {
@@ -1591,7 +1591,7 @@
         documentName: "Заявка на командировку",
         format: "html",
         fileName: "Заявка-на-командировку.html",
-        filePath: "Документы/MADOC Concept/Печатные формы/Заявка-на-командировку.html",
+        filePath: "Документы/MADOC/Печатные формы/Заявка-на-командировку.html",
         createdAt: now - 12 * 24 * 60 * 60 * 1000,
       },
     ];
@@ -1627,7 +1627,7 @@
     activeDescriptor = null;
     generatedHtml = "";
     draftValues = {};
-    document.title = "Печатные формы — MADOC Concept";
+    document.title = "Печатные формы — MADOC";
 
     if (pushHistory) {
       const archiveParams = new URLSearchParams();
@@ -1673,7 +1673,7 @@
             <div>
               <p class="eyebrow">Локальный архив</p>
               <h1>Печатные формы</h1>
-              <p>Готовые HTML-документы хранятся в папке «Документы\\MADOC Concept\\Печатные формы».</p>
+              <p>Готовые HTML-документы хранятся в папке «Документы\\MADOC\\Печатные формы».</p>
             </div>
           </section>
 
@@ -2263,7 +2263,7 @@
           documentName: activeSchema.displayName,
           format: outputFormat,
           fileName: `${activeSchema.documentType}-${timestamp}.${outputFormat}`,
-          filePath: `Документы/MADOC Concept/Печатные формы/${activeSchema.documentType}-${timestamp}.${outputFormat}`,
+          filePath: `Документы/MADOC/Печатные формы/${activeSchema.documentType}-${timestamp}.${outputFormat}`,
           createdAt: timestamp,
         };
         ensureDemoSavedDocuments();
