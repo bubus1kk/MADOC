@@ -1479,35 +1479,6 @@ select.field-control {
   font-size: 12px;
 }
 
-.output-format-control {
-  display: grid;
-  gap: 4px;
-  min-width: 96px;
-}
-
-.output-format-control span {
-  color: var(--ink-soft);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.output-format-control select {
-  height: 42px;
-  padding: 0 30px 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 11px;
-  color: var(--ink);
-  background:
-    linear-gradient(45deg, transparent 50%, #8294a7 50%) calc(100% - 14px) 18px / 5px 5px no-repeat,
-    linear-gradient(135deg, #8294a7 50%, transparent 50%) calc(100% - 9px) 18px / 5px 5px no-repeat,
-    #fff;
-  appearance: none;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .preview-frame-wrap {
   min-height: 700px;
   padding: 26px;
