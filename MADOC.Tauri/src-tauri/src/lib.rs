@@ -37,7 +37,7 @@ impl BridgeProcess {
     fn start(bridge_path: &Path) -> Result<Self, String> {
         if !bridge_path.exists() {
             return Err(format!(
-                "DesktopBridge не найден: {}. Сначала соберите MADOC.DesktopBridge.",
+                "DesktopBridge не найден: {}. Сначала соберите проект MADOC.DesktopBridge.",
                 bridge_path.display()
             ));
         }
@@ -126,7 +126,7 @@ async fn bridge_request(
 
     tauri::async_runtime::spawn_blocking(move || {
         let id = format!(
-            "tauri-{}",
+            "desktop-{}",
             state.request_sequence.fetch_add(1, Ordering::Relaxed)
         );
         let request = json!({
@@ -197,13 +197,20 @@ struct StoredPrintDocument {
     created_at: u64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredPrintDocumentContent {
+    document: StoredPrintDocument,
+    html_content: String,
+}
+
 fn print_forms_directory(app: &AppHandle) -> Result<PathBuf, String> {
     let documents_directory = app
         .path()
         .document_dir()
         .map_err(|error| format!("Не удалось определить папку документов: {error}"))?;
     let target_directory = documents_directory
-        .join("MADOC")
+        .join("MADOC Concept")
         .join("Печатные формы");
     fs::create_dir_all(&target_directory)
         .map_err(|error| format!("Не удалось создать папку печатных форм: {error}"))?;
@@ -321,7 +328,7 @@ fn save_print_document_sync(
         "{}-{timestamp}",
         safe_file_component(&document_type).to_ascii_lowercase()
     );
-    let file_name = format!("{safe_name}-{timestamp}.html");
+    let file_name = format!("{safe_name}-{timestamp}.{format}");
     let file_path = target_directory.join(&file_name);
 
     fs::write(&file_path, &html)
@@ -358,6 +365,69 @@ async fn save_print_document(
     })
     .await
     .map_err(|error| format!("Создание документа было прервано: {error}"))?
+}
+
+fn load_stored_documents(app: &AppHandle) -> Result<Vec<StoredPrintDocument>, String> {
+    let (target_directory, metadata_directory) = prepare_print_form_storage(app)?;
+    let mut documents = Vec::new();
+
+    for entry in fs::read_dir(&metadata_directory)
+        .map_err(|error| format!("Не удалось прочитать индекс печатных форм: {error}"))?
+    {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if !is_print_form_metadata(&path) {
+            continue;
+        }
+
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(_) => continue,
+        };
+        let mut document: StoredPrintDocument = match serde_json::from_str(&content) {
+            Ok(document) => document,
+            Err(_) => continue,
+        };
+        if document.format != "html" {
+            continue;
+        }
+        let document_path = target_directory.join(&document.file_name);
+        if !document_path.exists() {
+            continue;
+        }
+        document.file_path = document_path.to_string_lossy().into_owned();
+        documents.push(document);
+    }
+
+    documents.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    Ok(documents)
+}
+
+#[tauri::command]
+fn list_print_documents(app: AppHandle) -> Result<Vec<StoredPrintDocument>, String> {
+    load_stored_documents(&app)
+}
+
+#[tauri::command]
+fn read_print_document(
+    app: AppHandle,
+    document_id: String,
+) -> Result<StoredPrintDocumentContent, String> {
+    let document = load_stored_documents(&app)?
+        .into_iter()
+        .find(|document| document.id == document_id)
+        .ok_or_else(|| "Печатная форма не найдена.".to_owned())?;
+    let file_path = PathBuf::from(&document.file_path);
+
+    let html_content = fs::read_to_string(&file_path)
+        .map_err(|error| format!("Не удалось открыть HTML-форму: {error}"))?;
+    Ok(StoredPrintDocumentContent {
+        document,
+        html_content,
+    })
 }
 
 fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
@@ -406,21 +476,26 @@ fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
         .join("MADOC.DesktopBridge.dll")
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            let bridge_path = resolve_bridge_path(&app.handle());
+            if let Err(error) = prepare_print_form_storage(&app.handle()) {
+                eprintln!("Не удалось подготовить хранилище печатных форм: {error}");
+            }
             app.manage(BridgeState {
                 process: Arc::new(Mutex::new(None)),
-                bridge_path: resolve_bridge_path(&app.handle()),
+                bridge_path,
                 request_sequence: Arc::new(AtomicU64::new(1)),
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             bridge_request,
-            save_print_document
+            save_print_document,
+            list_print_documents,
+            read_print_document
         ])
         .run(tauri::generate_context!())
-        .expect("error while running MADOC.Tauri");
+        .expect("error while running MADOC desktop application");
 }

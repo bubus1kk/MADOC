@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MADOC",
+  "productName": "MADOC Concept",
   "version": "0.1.0",
-  "identifier": "ru.madoc.tauri",
+  "identifier": "ru.madoc.desktop.concept",
   "build": {
     "beforeDevCommand": "dotnet build ../MADOC.DesktopBridge/MADOC.DesktopBridge.csproj",
     "beforeBuildCommand": "dotnet publish ../MADOC.DesktopBridge/MADOC.DesktopBridge.csproj -c Release -r win-x64 --self-contained true -o bridge-publish",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MADOC - \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b",
+        "title": "MADOC Concept — Документы",
         "width": 1180,
         "height": 820,
         "minWidth": 920,
@@ -21,7 +21,7 @@
         "center": true,
         "resizable": true,
         "decorations": true,
-        "backgroundColor": "#dcebf7"
+        "backgroundColor": "#BFC1C2"
       }
     ],
     "security": {
@@ -29,6 +29,16 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../bridge-publish/": "bridge/"
+    }
   }
 }

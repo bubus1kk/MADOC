@@ -4,6 +4,7 @@
   const app = document.querySelector("#app");
   const toastRegion = document.querySelector("#toast-region");
   const params = new URLSearchParams(window.location.search);
+  const demoMode = params.get("demo") === "1";
   const invoke = window.__TAURI__?.core?.invoke;
 
   const icons = {
@@ -111,75 +112,108 @@
   };
 
   const demoDocumentTypes = [
-    { key: "certificate_request", displayName: "Заявка на справку" },
-    { key: "student_application", displayName: "Заявление студента" },
-    { key: "service_contract", displayName: "Договор оказания услуг" },
-    { key: "business_trip_request", displayName: "Заявка на командировку" },
-    { key: "room_booking_request", displayName: "Заявка на бронирование аудитории" },
+    {
+      key: "certificate_request",
+      displayName: "Заявка на справку",
+      templateFileName: "certificate_request.html",
+    },
+    {
+      key: "student_application",
+      displayName: "Заявление студента",
+      templateFileName: "student_application.html",
+    },
+    {
+      key: "service_contract",
+      displayName: "Договор оказания услуг",
+      templateFileName: "service_contract.html",
+    },
+    {
+      key: "business_trip_request",
+      displayName: "Заявка на командировку",
+      templateFileName: "business_trip_request.html",
+    },
+    {
+      key: "room_booking_request",
+      displayName: "Заявка на бронирование аудитории",
+      templateFileName: "room_booking_request.html",
+    },
   ];
 
-  const demoSchemas = Object.fromEntries(
-    demoDocumentTypes.map((type) => [
-      type.key,
-      {
-        documentType: type.key,
-        displayName: type.displayName,
-        fields: [
-          textField("RequesterFullName", "ФИО заявителя", true, 150),
-          textField("RequesterGroup", "Учебная группа", true, 30),
-          listField("RequestPurpose", "Назначение", true, [
-            { value: "study", displayName: "Учебный процесс" },
-            { value: "work", displayName: "Работа" },
-            { value: "other", displayName: "Другое" },
-          ]),
-          dateField("DesiredDate", "Желаемая дата", true),
-          textField("Comment", "Комментарий", false, 300, true),
-        ],
-      },
-    ]),
-  );
+  const demoSchema = {
+    documentType: "certificate_request",
+    displayName: "Заявка на справку",
+    fields: [
+      textField("RequesterFullName", "ФИО заявителя", true, 150),
+      textField("RequesterGroup", "Учебная группа", true, 30),
+      numberField("CopiesCount", "Количество экземпляров", true, 1, 10),
+      dateField("DesiredReceiveDate", "Желаемая дата получения", true),
+      timeField("DesiredReceiveTime", "Желаемое время получения", true),
+      textField("OrganizationName", "Организация-получатель", false, 200),
+      listField("CertificateType", "Тип справки", true, [
+        { value: "education", displayName: "Об обучении" },
+        { value: "income", displayName: "О доходах" },
+        { value: "family", displayName: "О составе семьи" },
+      ]),
+      listField("CertificatePurpose", "Назначение справки", true, [], [
+        "CertificateType",
+      ]),
+      listField("CertificateFormat", "Формат справки", true, [], [
+        "CertificatePurpose",
+      ]),
+      listField("ReceivePlace", "Место получения", true, [], [
+        "CertificateFormat",
+      ]),
+      readOnlyField("NeedStamp", "Нужна печать", "Boolean"),
+      readOnlyField("CertificateSummary", "Краткое описание справки", "Text"),
+    ],
+  };
 
   let documentTypes = [];
   let activeSchema = null;
   let activeDescriptor = null;
   let generatedHtml = "";
+  let formDirty = false;
   let draftValues = {};
-
-  function textField(name, displayName, isRequired, maxLength, isMultiline = false) {
-    return {
-      name,
-      displayName,
-      type: isMultiline ? "MultilineText" : "Text",
-      isReadOnly: false,
-      constraints: { isRequired, maxLength, isMultiline },
-      options: [],
-    };
-  }
-
-  function dateField(name, displayName, isRequired) {
-    return {
-      name,
-      displayName,
-      type: "Date",
-      isReadOnly: false,
-      constraints: { isRequired },
-      options: [],
-    };
-  }
-
-  function listField(name, displayName, isRequired, options) {
-    return {
-      name,
-      displayName,
-      type: "List",
-      isReadOnly: false,
-      constraints: { isRequired },
-      options,
-    };
-  }
+  let activeDocumentType = params.get("document");
+  let savedDocuments = [];
+  let demoSavedDocuments = [];
 
   function icon(name, className = "") {
     return `<svg class="icon ${className}" viewBox="0 0 24 24" aria-hidden="true">${icons[name] ?? icons.file}</svg>`;
+  }
+
+  function brandMarkup(showCaption = false) {
+    return `
+      <span class="brand" aria-label="MADOC">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="brand-copy">
+          <span class="brand-name">MADOC</span>
+          ${showCaption ? '<span class="brand-caption">Новая визуальная концепция</span>' : ""}
+        </span>
+      </span>`;
+  }
+
+  function appHeaderMarkup(activeView) {
+    return `
+      <header class="app-header">
+        ${brandMarkup()}
+        <nav class="app-nav" aria-label="Основная навигация">
+          <button class="nav-item ${activeView === "templates" ? "nav-item--active" : ""}" data-app-view="templates">Шаблоны</button>
+          <button class="nav-item ${activeView === "print-forms" ? "nav-item--active" : ""}" data-app-view="print-forms">Печатные формы</button>
+        </nav>
+      </header>`;
+  }
+
+  function bindAppHeader() {
+    document.querySelectorAll("[data-app-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.appView === "print-forms") {
+          navigateArchive(true);
+        } else {
+          navigateHome(true);
+        }
+      });
+    });
   }
 
   function escapeHtml(value) {
@@ -901,101 +935,224 @@
     window.setTimeout(() => window.scrollTo(0, 0), 0);
   }
 
+  function textField(name, displayName, required, maxLength) {
+    return {
+      name,
+      displayName,
+      type: "Text",
+      isReadOnly: false,
+      constraints: {
+        isRequired: required,
+        maxLength,
+      },
+      options: [],
+    };
+  }
+
+  function numberField(name, displayName, required, minNumber, maxNumber) {
+    return {
+      name,
+      displayName,
+      type: "Integer",
+      isReadOnly: false,
+      constraints: {
+        isRequired: required,
+        minNumber,
+        maxNumber,
+        allowFloats: false,
+      },
+      options: [],
+    };
+  }
+
+  function dateField(name, displayName, required) {
+    return {
+      name,
+      displayName,
+      type: "Date",
+      isReadOnly: false,
+      constraints: { isRequired: required },
+      options: [],
+    };
+  }
+
+  function timeField(name, displayName, required) {
+    return {
+      name,
+      displayName,
+      type: "Time",
+      isReadOnly: false,
+      constraints: { isRequired: required },
+      options: [],
+    };
+  }
+
+  function listField(name, displayName, required, options, parents = null) {
+    return {
+      name,
+      displayName,
+      type: "List",
+      isReadOnly: false,
+      constraints: { isRequired: required },
+      options,
+      dependency: parents ? { parentFieldNames: parents } : null,
+    };
+  }
+
+  function readOnlyField(name, displayName, type) {
+    return {
+      name,
+      displayName,
+      type,
+      isReadOnly: true,
+      constraints: { isRequired: false },
+      options: [],
+    };
+  }
+
   async function bridge(command, payload = {}) {
-    if (!invoke) {
+    if (demoMode) {
       return demoBridge(command, payload);
+    }
+
+    if (!invoke) {
+      throw new Error(
+        "Desktop API недоступен. Запустите приложение через Tauri, а не как обычную веб-страницу.",
+      );
     }
 
     return invoke("bridge_request", { command, payload });
   }
 
-  async function demoBridge(command, payload = {}) {
-    if (command === "getDocumentTypes") {
-      return { documentTypes: demoDocumentTypes };
-    }
+  async function demoBridge(command, payload) {
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
 
-    if (command === "getDocumentSchema") {
-      return demoSchemas[payload.documentType] ?? demoSchemas.certificate_request;
+    switch (command) {
+      case "health":
+        return { status: "ok" };
+      case "getDocumentTypes":
+        return { documentTypes: demoDocumentTypes };
+      case "getDocumentSchema": {
+        const descriptor =
+          demoDocumentTypes.find((item) => item.key === payload.documentType) ??
+          demoDocumentTypes[0];
+        return {
+          ...demoSchema,
+          documentType: descriptor.key,
+          displayName: descriptor.displayName,
+        };
+      }
+      case "getFieldOptions":
+        return {
+          isSuccess: true,
+          options: [
+            { value: `${payload.fieldName.toLowerCase()}_one`, displayName: "Основной вариант" },
+            { value: `${payload.fieldName.toLowerCase()}_two`, displayName: "Дополнительный вариант" },
+          ],
+          errors: [],
+        };
+      case "validateDocument":
+        return { documentType: payload.documentType, isValid: true, errors: [] };
+      case "generatePrintHtml":
+        return {
+          documentType: payload.documentType,
+          isSuccess: true,
+          errors: [],
+          htmlContent: createDemoPrintHtml(payload.values),
+        };
+      default:
+        throw new Error(`Неизвестная demo-команда: ${command}`);
     }
-
-    if (command === "getFieldOptions") {
-      return { isSuccess: true, options: [], errors: [] };
-    }
-
-    if (command === "validateDocument") {
-      return { isValid: true, errors: [] };
-    }
-
-    if (command === "generatePrintHtml") {
-      return {
-        isSuccess: true,
-        htmlContent: createDemoPrintHtml(payload.values ?? {}),
-        errors: [],
-      };
-    }
-
-    throw new Error(`Команда ${command} недоступна.`);
   }
 
-  function brandMarkup(showCaption = false) {
-    return `
-      <span class="brand" aria-label="MADOC">
-        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span class="brand-copy">
-          <span class="brand-name">MADOC</span>
-          ${showCaption ? '<span class="brand-caption">Новая визуальная концепция</span>' : ""}
-        </span>
-      </span>`;
+  function createDemoPrintHtml(values) {
+    const rows = Object.entries(values)
+      .map(
+        ([key, value]) =>
+          `<div class="row"><span>${escapeHtml(key)}</span><strong>${escapeHtml(
+            typeof value === "object" ? JSON.stringify(value) : value,
+          )}</strong></div>`,
+      )
+      .join("");
+
+    return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Печатная форма</title><style>
+      @page{size:A4;margin:20mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#111;font-family:"Times New Roman",serif;font-size:14pt}
+      main{width:170mm;min-height:250mm;margin:0 auto;padding:18mm 0}header{text-align:right;font-size:11pt}h1{text-align:center;margin:30mm 0 18mm;font-size:17pt;text-transform:uppercase}
+      .row{display:grid;grid-template-columns:70mm 1fr;gap:8mm;margin:0 0 8mm;border-bottom:1px solid #222;padding-bottom:2mm}.row span{font-size:12pt}.row strong{font-weight:400}
+      .signature{display:grid;grid-template-columns:1fr 60mm;gap:15mm;margin-top:30mm}.line{border-bottom:1px solid #111}
+      @media print{main{width:auto;min-height:auto;padding:0}}
+    </style></head><body><main><header>Форма MADOC</header><h1>${escapeHtml(
+      activeSchema?.displayName ?? "Документ",
+    )}</h1>${rows}<div class="signature"><span>Дата: __________________</span><span class="line">Подпись</span></div></main></body></html>`;
   }
 
-  function appHeaderMarkup(activeView = "templates") {
-    return `
-      <header class="app-header">
-        ${brandMarkup()}
-        <nav class="app-nav" aria-label="Основная навигация">
-          <button class="nav-item ${activeView === "templates" ? "nav-item--active" : ""}" type="button" data-app-view="templates">Шаблоны</button>
-          <button class="nav-item ${activeView === "print-forms" ? "nav-item--active" : ""}" type="button" data-app-view="print-forms">Печатные формы</button>
-        </nav>
-      </header>`;
+  function showToast(title, message, type = "success") {
+    const toast = document.createElement("div");
+    toast.className = `toast ${type === "error" ? "toast--error" : ""}`;
+    toast.innerHTML = `
+      ${icon(type === "error" ? "warning" : "check")}
+      <div class="toast-copy"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p></div>
+      <button class="toast-close" type="button" aria-label="Закрыть уведомление">
+        ${icon("close", "icon--small")}
+      </button>`;
+    toastRegion.append(toast);
+
+    let removeTimer;
+    const dismiss = () => {
+      window.clearTimeout(removeTimer);
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(8px)";
+      window.setTimeout(() => toast.remove(), 180);
+    };
+    toast.querySelector(".toast-close").addEventListener("click", dismiss);
+    removeTimer = window.setTimeout(dismiss, 5200);
   }
 
-  function bindHomeLinks() {
-    document.querySelectorAll("[data-app-view]").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (button.dataset.appView === "print-forms") {
-          return;
-        }
-
-        navigateHome(true);
-      });
-    });
+  function renderFatalError(title, error, allowRetry = true) {
+    app.innerHTML = `
+      <main class="error-state">
+        <section class="error-card">
+          <span class="error-icon">${icon("warning", "icon--large")}</span>
+          <h1>${escapeHtml(title)}</h1>
+          <p>${escapeHtml(error?.message ?? error)}</p>
+          ${
+            allowRetry
+              ? `<button class="primary-button" id="retry-button">${icon("refresh", "icon--small")} Повторить</button>`
+              : ""
+          }
+        </section>
+      </main>`;
+    document
+      .querySelector("#retry-button")
+      ?.addEventListener("click", () => window.location.reload());
   }
 
   async function initHome() {
     try {
+      await bridge("health");
       const response = await bridge("getDocumentTypes");
-      documentTypes = response.documentTypes ?? demoDocumentTypes;
+      documentTypes = response.documentTypes ?? [];
       renderHome();
     } catch (error) {
-      renderFatalError("Шаблоны не загрузились", error);
+      renderFatalError("Не удалось подключиться к DesktopBridge", error);
     }
   }
 
   function renderHome() {
-    activeSchema = null;
-    activeDescriptor = null;
-    document.title = "MADOC - Документы";
     app.innerHTML = `
       <div class="app-shell">
         ${appHeaderMarkup("templates")}
+
         <main class="home-content">
           <section class="hero">
-            <p class="eyebrow">Конструктор документов</p>
-            <h1>Какой документ <span>подготовить?</span></h1>
-            <p class="hero-description">
-              Выберите шаблон, заполните данные и получите готовую печатную форму.
-              Всё работает локально на этом компьютере.
-            </p>
+            <div>
+              <p class="eyebrow">Конструктор документов</p>
+              <h1>Какой документ <span>подготовить?</span></h1>
+              <p class="hero-description">
+                Выберите шаблон, заполните данные и получите готовую печатную форму.
+                Всё работает локально на этом компьютере.
+              </p>
+            </div>
           </section>
 
           <section class="catalog-panel" aria-labelledby="catalog-title">
@@ -1007,22 +1164,49 @@
             </div>
             <div class="template-grid" id="template-grid"></div>
           </section>
-
           <p class="privacy-note">${icon("shield", "icon--small")} Данные не покидают устройство и не отправляются в интернет</p>
         </main>
       </div>`;
 
-    bindHomeLinks();
-    renderTemplateCards();
+    bindAppHeader();
+    renderTemplateCards("");
   }
 
-  function renderTemplateCards() {
+  function renderTemplateCards(searchTerm) {
+    const normalizedSearch = searchTerm.trim().toLocaleLowerCase("ru");
+    const filtered = documentTypes.filter((descriptor) => {
+      const meta = templateMeta[descriptor.key] ?? {};
+      return `${descriptor.displayName} ${meta.category ?? ""} ${meta.description ?? ""}`
+        .toLocaleLowerCase("ru")
+        .includes(normalizedSearch);
+    });
     const grid = document.querySelector("#template-grid");
-    grid.innerHTML = documentTypes
+
+    if (!filtered.length) {
+      grid.innerHTML = `
+        <div class="empty-catalog">
+          ${icon("search", "icon--large")}
+          <strong>Ничего не найдено</strong>
+          Попробуйте изменить поисковый запрос
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered
       .map((descriptor) => {
-        const meta = documentMeta(descriptor.key);
+        const meta = templateMeta[descriptor.key] ?? {
+          category: "Документ",
+          icon: "file",
+          color: "#188ed8",
+          wash: "#e8f6ff",
+          description: "Готовая форма документа.",
+        };
         return `
-          <button class="template-card ${meta.wide ? "template-card--wide" : ""}" type="button" data-document-type="${escapeHtml(descriptor.key)}">
+          <button
+            class="template-card ${meta.wide ? "template-card--wide" : ""}"
+            data-document-type="${escapeHtml(descriptor.key)}"
+            style="--card-color:${meta.color};--card-wash:${meta.wash}"
+          >
             <span class="template-card-top">
               <span class="template-icon">${icon(meta.icon, "icon--large")}</span>
               <span class="template-badge">${escapeHtml(meta.category)}</span>
@@ -1039,76 +1223,89 @@
     });
   }
 
-  function documentMeta(documentType = activeDescriptor?.key) {
-    return (
-      templateMeta[documentType] ?? {
-        category: "Документ",
-        icon: "file",
-        description: "Готовая форма документа.",
-      }
-    );
-  }
-
   async function openDocument(documentType) {
-    const card = document.querySelector(`[data-document-type="${CSS.escape(documentType)}"]`);
+    const descriptor = documentTypes.find((item) => item.key === documentType);
+    if (!descriptor) return;
+
     try {
-      setCardBusy(card, true);
-      await initDocument(documentType);
+      cardBusy(documentType, true);
+      activeDocumentType = documentType;
       const nextParams = new URLSearchParams();
       nextParams.set("document", documentType);
-      window.history.pushState({ documentType }, "", `${window.location.pathname}?${nextParams}`);
+      if (demoMode) nextParams.set("demo", "1");
+      window.history.pushState(
+        { documentType },
+        "",
+        `${window.location.pathname}?${nextParams.toString()}`,
+      );
+      await initDocument(documentType);
     } catch (error) {
-      setCardBusy(card, false);
+      cardBusy(documentType, false);
       showToast("Не удалось открыть форму", error?.message ?? error, "error");
     }
   }
 
-  function setCardBusy(card, busy) {
+  function cardBusy(documentType, busy) {
+    const card = document.querySelector(`[data-document-type="${CSS.escape(documentType)}"]`);
     if (!card) return;
     card.disabled = busy;
     const footer = card.querySelector(".template-card-footer");
     if (footer) {
       footer.innerHTML = busy
-        ? "Открываем форму..."
+        ? "Открываем форму…"
         : `Заполнить форму ${icon("chevronRight", "icon--small")}`;
     }
   }
 
-  async function initDocument(documentType) {
-    const [typesResponse, schema] = await Promise.all([
-      documentTypes.length ? Promise.resolve({ documentTypes }) : bridge("getDocumentTypes"),
-      bridge("getDocumentSchema", { documentType }),
-    ]);
+  async function initDocument(documentType = activeDocumentType) {
+    if (!documentType) {
+      await initHome();
+      return;
+    }
 
-    documentTypes = typesResponse.documentTypes ?? documentTypes;
-    activeSchema = schema;
-    activeDescriptor =
-      documentTypes.find((item) => item.key === documentType) ?? {
-        key: documentType,
-        displayName: schema.displayName,
-      };
-    document.title = `${schema.displayName} — MADOC`;
-    generatedHtml = "";
-    draftValues = {};
-    renderDocumentForm();
+    try {
+      const [typesResponse, schema] = await Promise.all([
+        bridge("getDocumentTypes"),
+        bridge("getDocumentSchema", { documentType }),
+      ]);
+      documentTypes = typesResponse.documentTypes ?? [];
+      activeSchema = schema;
+      activeDescriptor =
+        documentTypes.find((item) => item.key === documentType) ?? {
+          key: documentType,
+          displayName: schema.displayName,
+          templateFileName: null,
+        };
+      document.title = `${schema.displayName} — MADOC Concept`;
+      renderDocumentForm();
+    } catch (error) {
+      renderFatalError("Форма не загрузилась", error);
+    }
   }
 
-  function editableFields() {
-    return (activeSchema?.fields ?? []).filter((field) => !field.isReadOnly);
+  function documentMeta() {
+    return (
+      templateMeta[activeDescriptor?.key] ?? {
+        category: "Документ",
+        icon: "file",
+        color: "#188ed8",
+        wash: "#e8f6ff",
+        description: "Готовая форма документа.",
+      }
+    );
   }
 
-  function sidebarMarkup(activeStep = 1) {
+  function sidebarMarkup(activeStep) {
     const meta = documentMeta();
     const steps = [
       ["Заполнение", "Введите исходные данные"],
       ["Предпросмотр", "Проверьте печатную форму"],
-      ["Сохранение", "Создайте HTML-документ"],
+      ["Сохранение", "Создайте HTML"],
     ];
-
     return `
       <aside class="form-sidebar">
         ${brandMarkup()}
-        <button class="sidebar-back" id="close-document" type="button">${icon("arrowLeft", "icon--small")} Ко всем шаблонам</button>
+        <button class="sidebar-back" id="close-document">${icon("arrowLeft", "icon--small")} Ко всем шаблонам</button>
         <div class="document-identity">
           <span class="template-icon" style="color:${meta.color};background:${meta.wash}">${icon(meta.icon)}</span>
           <div>
@@ -1119,13 +1316,18 @@
         </div>
         <div class="steps">
           ${steps
-            .map(([title, description], index) => {
+            .map((step, index) => {
               const stepNumber = index + 1;
-              const status = stepNumber === activeStep ? "step--active" : stepNumber < activeStep ? "step--complete" : "";
+              const status =
+                stepNumber < activeStep
+                  ? "step--complete"
+                  : stepNumber === activeStep
+                    ? "step--active"
+                    : "";
               return `
-                <div class="step ${status}" ${stepNumber === 2 ? 'id="validation-step"' : ""}>
+                <div class="step ${status}">
                   <span class="step-number">${stepNumber < activeStep ? icon("check", "icon--small") : stepNumber}</span>
-                  <span><strong>${title}</strong><span>${description}</span></span>
+                  <span><strong>${step[0]}</strong><span>${step[1]}</span></span>
                 </div>`;
             })
             .join("")}
@@ -1146,24 +1348,30 @@
         </div>
         ${
           mode === "preview"
-            ? '<span class="toolbar-state toolbar-state--ready">Форма сформирована</span>'
+            ? '<span class="toolbar-state toolbar-state--ready" id="toolbar-state">Форма сформирована</span>'
             : ""
         }
       </header>`;
   }
 
+  function editableFields() {
+    return (activeSchema?.fields ?? []).filter((field) => !field.isReadOnly);
+  }
+
   function renderDocumentForm() {
+    generatedHtml = "";
+    formDirty = false;
     app.innerHTML = `
       <div class="form-shell">
-        ${sidebarMarkup()}
+        ${sidebarMarkup(1)}
         <main class="form-workspace">
-          ${toolbarMarkup()}
+          ${toolbarMarkup("form")}
           <div class="workspace-content">
             <div class="workspace-heading">
               <div>
-                <p class="eyebrow">Заполнение документа</p>
+                <p class="eyebrow">Шаг 1 из 3</p>
                 <h2>Заполните данные</h2>
-                <p>Обязательные поля отмечены звёздочкой. После заполнения можно проверить данные правилами документа.</p>
+                <p>Обязательные поля отмечены звёздочкой. Перед печатью данные будут проверены.</p>
               </div>
               <div class="progress-ring">
                 <span class="progress-ring-visual" id="progress-ring"></span>
@@ -1175,21 +1383,16 @@
               <section class="form-section">
                 <div class="section-heading">
                   <span class="section-icon">${icon("clipboard")}</span>
-                  <div>
-                    <h3>Данные документа</h3>
-                    <p>Поля построены по схеме выбранного шаблона</p>
-                  </div>
+                  <div><h3>Данные документа</h3><p>Информация будет перенесена в печатный шаблон</p></div>
                 </div>
                 <div class="fields-grid">
                   ${editableFields().map(renderField).join("")}
                 </div>
               </section>
-
               <div class="form-message" id="form-message">
                 ${icon("warning", "icon--small")}
                 <span>Проверьте отмеченные поля.</span>
               </div>
-
               <footer class="form-actions">
                 <button class="ghost-button" type="button" id="reset-form">${icon("refresh", "icon--small")} Очистить</button>
                 <button class="primary-button" type="submit" id="preview-button">
@@ -1201,24 +1404,26 @@
         </main>
       </div>`;
 
-    document.querySelector("#close-document").addEventListener("click", () => navigateHome(true));
-    enhanceSelects(document);
-    enhanceDateInputs(document);
-    enhanceTimeInputs(document);
+    bindCommonDocumentActions();
+    enhanceSelects(app);
+    enhanceDateInputs(app);
+    enhanceTimeInputs(app);
     bindFormActions();
     restoreDraftValues();
-    updateProgress();
     resetPageScroll();
   }
 
   function renderField(field) {
     const constraints = field.constraints ?? {};
     const isFull = ["MultilineText", "DateRange", "DateTimeRange"].includes(field.type);
+    const requiredLabel = constraints.isRequired
+      ? '<span class="required-mark" aria-label="Обязательное поле">*</span>'
+      : '<span class="optional-label">необязательно</span>';
     return `
       <div class="field ${isFull ? "field--full" : ""}" data-field-wrapper="${escapeHtml(field.name)}">
         <label class="field-label" for="field-${escapeHtml(field.name)}">
-          <span>${escapeHtml(field.displayName)}${constraints.isRequired ? ' <span class="required-mark">*</span>' : ""}</span>
-          ${constraints.isRequired ? "" : '<span class="optional-label">необязательно</span>'}
+          <span>${escapeHtml(field.displayName)} ${constraints.isRequired ? requiredLabel : ""}</span>
+          ${constraints.isRequired ? "" : requiredLabel}
         </label>
         ${renderControl(field)}
         <p class="field-help">${escapeHtml(fieldHelp(field))}</p>
@@ -1260,12 +1465,15 @@
             <option value="false">Нет</option>
           </select>`;
       case "List": {
-        const hasDependency = field.dependency?.parentFieldNames?.length;
+        const dependency = field.dependency?.parentFieldNames?.length;
         return `
-          <select class="field-control" ${attributes} ${hasDependency ? "disabled" : ""}>
-            <option value="">${hasDependency ? "Сначала заполните предыдущее поле" : "Выберите вариант"}</option>
+          <select class="field-control" ${attributes} ${dependency ? "disabled" : ""}>
+            <option value="">${dependency ? "Сначала заполните предыдущее поле" : "Выберите вариант"}</option>
             ${(field.options ?? [])
-              .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.displayName)}</option>`)
+              .map(
+                (option) =>
+                  `<option value="${escapeHtml(option.value)}">${escapeHtml(option.displayName)}</option>`,
+              )
               .join("")}
           </select>`;
       }
@@ -1275,7 +1483,7 @@
         return `
           <div class="range-control" data-range-field="${escapeHtml(field.name)}">
             <input class="field-control" id="field-${escapeHtml(field.name)}" data-range-part="from" type="${inputType}" aria-label="${escapeHtml(field.displayName)}: начало" />
-            <span class="range-separator">-</span>
+            <span class="range-separator">—</span>
             <input class="field-control" data-range-part="to" type="${inputType}" aria-label="${escapeHtml(field.displayName)}: окончание" />
           </div>`;
       }
@@ -1309,9 +1517,11 @@
     if (field.dependency?.parentFieldNames?.length) {
       return "Список обновится после выбора предыдущего значения";
     }
-    if (constraints.maxLength) return `До ${constraints.maxLength} символов`;
+    if (constraints.maxLength) {
+      return `До ${constraints.maxLength} символов`;
+    }
     if (constraints.minNumber != null || constraints.maxNumber != null) {
-      const min = constraints.minNumber ?? "-∞";
+      const min = constraints.minNumber ?? "−∞";
       const max = constraints.maxNumber ?? "∞";
       return `Допустимое значение: от ${min} до ${max}`;
     }
@@ -1320,7 +1530,320 @@
     }
     if (field.type === "Date") return "Дата в формате ДД.ММ.ГГГГ";
     if (field.type === "Time") return "Время в 24-часовом формате";
-    return constraints.isRequired ? "Обязательное поле" : "Можно оставить пустым";
+    return field.constraints?.isRequired ? "Обязательное поле" : "Можно оставить пустым";
+  }
+
+  function bindCommonDocumentActions() {
+    document.querySelector("#close-document")?.addEventListener("click", closeDocumentWindow);
+  }
+
+  function closeDocumentWindow() {
+    navigateHome(true);
+  }
+
+  function navigateHome(pushHistory) {
+    activeDocumentType = null;
+    activeSchema = null;
+    activeDescriptor = null;
+    generatedHtml = "";
+    draftValues = {};
+    document.title = "MADOC Concept — Документы";
+
+    if (pushHistory) {
+      const homeUrl = demoMode
+        ? `${window.location.pathname}?demo=1`
+        : window.location.pathname;
+      window.history.pushState({ documentType: null }, "", homeUrl);
+    }
+
+    if (documentTypes.length) {
+      renderHome();
+    } else {
+      initHome();
+    }
+  }
+
+  function ensureDemoSavedDocuments() {
+    if (demoSavedDocuments.length) return;
+    const now = Date.now();
+    demoSavedDocuments = [
+      {
+        id: "demo-certificate-html",
+        documentType: "certificate_request",
+        documentName: "Заявка на справку",
+        format: "html",
+        fileName: "Заявка-на-справку.html",
+        filePath: "Документы/MADOC Concept/Печатные формы/Заявка-на-справку.html",
+        createdAt: now - 45 * 60 * 1000,
+      },
+      {
+        id: "demo-application-html",
+        documentType: "student_application",
+        documentName: "Заявление студента",
+        format: "html",
+        fileName: "Заявление-студента.html",
+        filePath: "Документы/MADOC Concept/Печатные формы/Заявление-студента.html",
+        createdAt: now - 2 * 24 * 60 * 60 * 1000,
+      },
+      {
+        id: "demo-trip-html",
+        documentType: "business_trip_request",
+        documentName: "Заявка на командировку",
+        format: "html",
+        fileName: "Заявка-на-командировку.html",
+        filePath: "Документы/MADOC Concept/Печатные формы/Заявка-на-командировку.html",
+        createdAt: now - 12 * 24 * 60 * 60 * 1000,
+      },
+    ];
+  }
+
+  async function listStoredPrintDocuments() {
+    if (demoMode) {
+      ensureDemoSavedDocuments();
+      return [...demoSavedDocuments].sort((left, right) => right.createdAt - left.createdAt);
+    }
+    return invoke("list_print_documents");
+  }
+
+  async function readStoredPrintDocument(documentId) {
+    if (demoMode) {
+      const document = demoSavedDocuments.find((item) => item.id === documentId);
+      if (!document) throw new Error("Печатная форма не найдена.");
+      return {
+        document,
+        htmlContent: createDemoPrintHtml({
+          Документ: document.documentName,
+          Формат: document.format.toUpperCase(),
+          Создан: formatStoredDate(document.createdAt),
+        }),
+      };
+    }
+    return invoke("read_print_document", { documentId });
+  }
+
+  async function navigateArchive(pushHistory) {
+    activeDocumentType = null;
+    activeSchema = null;
+    activeDescriptor = null;
+    generatedHtml = "";
+    draftValues = {};
+    document.title = "Печатные формы — MADOC Concept";
+
+    if (pushHistory) {
+      const archiveParams = new URLSearchParams();
+      archiveParams.set("view", "print-forms");
+      if (demoMode) archiveParams.set("demo", "1");
+      window.history.pushState(
+        { view: "print-forms" },
+        "",
+        `${window.location.pathname}?${archiveParams.toString()}`,
+      );
+    }
+
+    app.innerHTML = `
+      <div class="app-shell">
+        ${appHeaderMarkup("print-forms")}
+        <main class="archive-content">
+          <div class="archive-loading">${icon("refresh", "icon--large")} Загружаем печатные формы…</div>
+        </main>
+      </div>`;
+    bindAppHeader();
+
+    try {
+      const [typesResponse, documents] = await Promise.all([
+        documentTypes.length
+          ? Promise.resolve({ documentTypes })
+          : bridge("getDocumentTypes"),
+        listStoredPrintDocuments(),
+      ]);
+      documentTypes = typesResponse.documentTypes ?? [];
+      savedDocuments = documents ?? [];
+      renderPrintFormsPage();
+    } catch (error) {
+      renderFatalError("Не удалось открыть печатные формы", error);
+    }
+  }
+
+  function renderPrintFormsPage() {
+    app.innerHTML = `
+      <div class="app-shell">
+        ${appHeaderMarkup("print-forms")}
+        <main class="archive-content">
+          <section class="archive-heading">
+            <div>
+              <p class="eyebrow">Локальный архив</p>
+              <h1>Печатные формы</h1>
+              <p>Готовые HTML-документы хранятся в папке «Документы\\MADOC Concept\\Печатные формы».</p>
+            </div>
+          </section>
+
+          <section class="archive-filters" aria-label="Фильтры печатных форм">
+            <label class="search-box archive-search">
+              ${icon("search")}
+              <span class="sr-only">Поиск печатной формы</span>
+              <input id="archive-search" type="search" placeholder="Найти печатную форму…" autocomplete="off" />
+            </label>
+            <div class="filter-control">
+              ${icon("layers", "icon--small")}
+              <span class="sr-only">Тип документа</span>
+              <select id="archive-type" aria-label="Тип документа">
+                <option value="">Все типы документов</option>
+                ${documentTypes
+                  .map(
+                    (type) =>
+                      `<option value="${escapeHtml(type.key)}">${escapeHtml(type.displayName)}</option>`,
+                  )
+                  .join("")}
+              </select>
+            </div>
+            <div class="filter-control">
+              ${icon("calendar", "icon--small")}
+              <span class="sr-only">Дата создания</span>
+              <select id="archive-date" aria-label="Дата создания">
+                <option value="">За всё время</option>
+                <option value="today">Сегодня</option>
+                <option value="7">Последние 7 дней</option>
+                <option value="30">Последние 30 дней</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="saved-forms-grid" id="saved-forms-grid" aria-live="polite"></section>
+        </main>
+      </div>`;
+
+    bindAppHeader();
+    enhanceSelects(app);
+    document.querySelector("#archive-search").addEventListener("input", renderSavedDocumentCards);
+    document.querySelector("#archive-type").addEventListener("change", renderSavedDocumentCards);
+    document.querySelector("#archive-date").addEventListener("change", renderSavedDocumentCards);
+    renderSavedDocumentCards();
+  }
+
+  function renderSavedDocumentCards() {
+    const search = document
+      .querySelector("#archive-search")
+      .value.trim()
+      .toLocaleLowerCase("ru");
+    const type = document.querySelector("#archive-type").value;
+    const period = document.querySelector("#archive-date").value;
+    const now = Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const filtered = savedDocuments.filter((document) => {
+      const matchesSearch =
+        !search ||
+        `${document.documentName} ${document.fileName} ${document.format}`
+          .toLocaleLowerCase("ru")
+          .includes(search);
+      const matchesType = !type || document.documentType === type;
+      let matchesDate = true;
+      if (period === "today") {
+        matchesDate = document.createdAt >= today.getTime();
+      } else if (period) {
+        matchesDate =
+          document.createdAt >= now - Number(period) * 24 * 60 * 60 * 1000;
+      }
+      return matchesSearch && matchesType && matchesDate;
+    });
+
+    const grid = document.querySelector("#saved-forms-grid");
+    if (!filtered.length) {
+      grid.innerHTML = `
+        <div class="archive-empty">
+          <span>${icon("archive", "icon--large")}</span>
+          <strong>Печатные формы не найдены</strong>
+          <p>Измените фильтры или создайте документ из шаблона.</p>
+          <button class="secondary-button" id="archive-to-templates">Перейти к шаблонам</button>
+        </div>`;
+      document
+        .querySelector("#archive-to-templates")
+        .addEventListener("click", () => navigateHome(true));
+      return;
+    }
+
+    grid.innerHTML = filtered
+      .map((document) => {
+        const meta = templateMeta[document.documentType] ?? {
+          icon: "file",
+          color: "#188ed8",
+          wash: "#e8f6ff",
+        };
+        return `
+          <button
+            class="saved-form-card"
+            data-saved-document="${escapeHtml(document.id)}"
+            data-document-type="${escapeHtml(document.documentType)}"
+          >
+            <span class="saved-form-icon" style="color:${meta.color};background:${meta.wash}">
+              ${icon("contract", "icon--large")}
+              <small>${escapeHtml(document.format.toUpperCase())}</small>
+            </span>
+            <span class="saved-form-copy">
+              <strong>${escapeHtml(document.documentName)}</strong>
+              <span>${escapeHtml(formatStoredDate(document.createdAt))}</span>
+            </span>
+            <span class="saved-form-open">Открыть ${icon("chevronRight", "icon--small")}</span>
+          </button>`;
+      })
+      .join("");
+
+    grid.querySelectorAll("[data-saved-document]").forEach((card) => {
+      card.addEventListener("click", () => openSavedDocument(card.dataset.savedDocument));
+    });
+  }
+
+  function documentTypeName(documentType) {
+    return (
+      documentTypes.find((type) => type.key === documentType)?.displayName ??
+      "Документ"
+    );
+  }
+
+  function formatStoredDate(timestamp) {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+  }
+
+  async function openSavedDocument(documentId) {
+    try {
+      const content = await readStoredPrintDocument(documentId);
+      renderSavedDocumentPreview(content);
+    } catch (error) {
+      showToast("Не удалось открыть документ", error?.message ?? error, "error");
+    }
+  }
+
+  function renderSavedDocumentPreview(content) {
+    const savedDocument = content.document;
+    app.innerHTML = `
+      <div class="app-shell">
+        ${appHeaderMarkup("print-forms")}
+        <main class="saved-preview-content">
+          <div class="saved-preview-toolbar">
+            <div>
+              <button class="sidebar-back saved-preview-back" id="back-to-archive">${icon("arrowLeft", "icon--small")} Ко всем печатным формам</button>
+              <p class="eyebrow">${escapeHtml(savedDocument.format.toUpperCase())} · ${escapeHtml(formatStoredDate(savedDocument.createdAt))}</p>
+              <h1>${escapeHtml(savedDocument.documentName)}</h1>
+              <p>${escapeHtml(savedDocument.filePath)}</p>
+            </div>
+          </div>
+          <div class="preview-frame-wrap saved-preview-frame-wrap">
+            <iframe class="preview-frame" id="stored-preview" title="Сохранённая печатная форма"></iframe>
+          </div>
+        </main>
+      </div>`;
+
+    bindAppHeader();
+    document
+      .querySelector("#back-to-archive")
+      .addEventListener("click", () => renderPrintFormsPage());
+    const frame = document.querySelector("#stored-preview");
+    frame.srcdoc = content.htmlContent ?? "";
+    resetPageScroll();
   }
 
   function bindFormActions() {
@@ -1328,50 +1851,72 @@
     form.addEventListener("submit", handlePreview);
     form.addEventListener("input", handleFormChange);
     form.addEventListener("change", handleFormChange);
-
     document.querySelector("#reset-form").addEventListener("click", () => {
       form.reset();
-      draftValues = {};
       clearAllErrors();
       resetDependentFields();
       refreshAllCustomSelects(form);
       refreshAllCustomCalendars(form);
       refreshAllCustomTimeInputs(form);
+      draftValues = {};
       updateProgress();
+      formDirty = false;
       showToast("Форма очищена", "Все введённые значения удалены.");
+    });
+
+    form.querySelectorAll("select[data-field]").forEach((select) => {
+      select.addEventListener("change", () => refreshDependentFields(select.dataset.field));
     });
   }
 
   function handleFormChange(event) {
-    const fieldName = event.target.dataset.field;
-    clearFieldError(fieldName);
-    clearFormMessage();
+    formDirty = true;
+    generatedHtml = "";
+    clearFieldError(event.target.dataset.field);
     draftValues = collectValues();
     updateProgress();
-
-    if (event.type === "change" && fieldName) {
-      refreshDependentFields(fieldName);
-    }
   }
 
   async function restoreDraftValues() {
-    for (const field of editableFields()) {
-      if (field.dependency?.parentFieldNames?.length) continue;
-      setControlValue(field, draftValues[field.name]);
-    }
+    editableFields()
+      .filter((field) => !field.dependency?.parentFieldNames?.length)
+      .forEach((field) => setControlValue(field, draftValues[field.name]));
 
-    for (const field of editableFields().filter((item) => item.dependency?.parentFieldNames?.length)) {
+    for (const field of editableFields().filter(
+      (candidate) => candidate.dependency?.parentFieldNames?.length,
+    )) {
       const value = draftValues[field.name];
-      if (value == null || value === "") continue;
+      const parentsReady = field.dependency.parentFieldNames.every(
+        (parentName) => draftValues[parentName] != null && draftValues[parentName] !== "",
+      );
 
-      const parentsReady = field.dependency.parentFieldNames.every((parentName) => {
-        const parentValue = draftValues[parentName];
-        return parentValue != null && parentValue !== "";
-      });
       if (!parentsReady) continue;
 
-      await loadOptionsForField(field, value);
+      const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
+      try {
+        const response = await bridge("getFieldOptions", {
+          documentType: activeSchema.documentType,
+          fieldName: field.name,
+          values: draftValues,
+        });
+        if (!response.isSuccess) continue;
+
+        select.innerHTML = `
+          <option value="">Выберите вариант</option>
+          ${(response.options ?? [])
+            .map(
+              (option) =>
+                `<option value="${escapeHtml(option.value)}">${escapeHtml(option.displayName)}</option>`,
+            )
+            .join("")}`;
+        select.disabled = false;
+        setControlValue(field, value);
+      } catch {
+        select.disabled = true;
+      }
     }
+
+    updateProgress();
   }
 
   function setControlValue(field, value) {
@@ -1383,8 +1928,8 @@
       const to = range?.querySelector('[data-range-part="to"]');
       if (from) from.value = value.from ?? "";
       if (to) to.value = value.to ?? "";
-      refreshAllCustomCalendars(range ?? document);
-      refreshAllCustomTimeInputs(range ?? document);
+      if (from) refreshCustomDateInput(from);
+      if (to) refreshCustomDateInput(to);
       return;
     }
 
@@ -1395,6 +1940,91 @@
       refreshCustomDateInput(control);
       refreshCustomTimeInput(control);
     }
+  }
+
+  function resetDependentFields() {
+    editableFields()
+      .filter((field) => field.dependency?.parentFieldNames?.length)
+      .forEach((field) => {
+        const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
+        select.innerHTML =
+          '<option value="">Сначала заполните предыдущее поле</option>';
+        select.disabled = true;
+      });
+  }
+
+  async function refreshDependentFields(changedFieldName) {
+    const descendants = collectDependentDescendants(changedFieldName);
+
+    for (const field of descendants) {
+      const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
+      select.value = "";
+      clearFieldError(field.name);
+
+      const parentsReady = field.dependency.parentFieldNames.every((parentName) => {
+        const parent = document.querySelector(`[data-field="${CSS.escape(parentName)}"]`);
+        return parent?.value;
+      });
+
+      if (!parentsReady) {
+        select.disabled = true;
+        select.innerHTML =
+          '<option value="">Сначала заполните предыдущее поле</option>';
+        continue;
+      }
+
+      select.disabled = true;
+      select.innerHTML = '<option value="">Загружаем варианты…</option>';
+
+      try {
+        const response = await bridge("getFieldOptions", {
+          documentType: activeSchema.documentType,
+          fieldName: field.name,
+          values: collectValues(),
+        });
+
+        if (!response.isSuccess) {
+          throw new Error((response.errors ?? []).join("\n"));
+        }
+
+        select.innerHTML = `
+          <option value="">Выберите вариант</option>
+          ${(response.options ?? [])
+            .map(
+              (option) =>
+                `<option value="${escapeHtml(option.value)}">${escapeHtml(option.displayName)}</option>`,
+            )
+            .join("")}`;
+        select.disabled = false;
+      } catch (error) {
+        select.innerHTML = '<option value="">Не удалось загрузить варианты</option>';
+        setFieldError(field.name, error?.message ?? error);
+      }
+    }
+
+    updateProgress();
+  }
+
+  function collectDependentDescendants(parentName) {
+    const result = [];
+    const queue = [parentName];
+    const visited = new Set();
+
+    while (queue.length) {
+      const current = queue.shift();
+      editableFields().forEach((field) => {
+        if (
+          !visited.has(field.name) &&
+          field.dependency?.parentFieldNames?.includes(current)
+        ) {
+          visited.add(field.name);
+          result.push(field);
+          queue.push(field.name);
+        }
+      });
+    }
+
+    return result;
   }
 
   function collectValues() {
@@ -1440,105 +2070,17 @@
       return true;
     }).length;
     const percent = fields.length ? Math.round((completed / fields.length) * 100) : 100;
-    document.querySelector("#progress-ring")?.style.setProperty("--progress", `${percent * 3.6}deg`);
+    const ring = document.querySelector("#progress-ring");
     const label = document.querySelector("#progress-value");
+    if (ring) ring.style.setProperty("--progress", `${percent * 3.6}deg`);
     if (label) label.textContent = `${percent}% заполнено`;
-  }
-
-  function resetDependentFields() {
-    editableFields()
-      .filter((field) => field.dependency?.parentFieldNames?.length)
-      .forEach((field) => {
-        const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
-        if (!select) return;
-        select.innerHTML = '<option value="">Сначала заполните предыдущее поле</option>';
-        select.disabled = true;
-      });
-  }
-
-  async function refreshDependentFields(changedFieldName) {
-    const descendants = collectDependentDescendants(changedFieldName);
-
-    for (const field of descendants) {
-      const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
-      if (!select) continue;
-      select.value = "";
-      clearFieldError(field.name);
-
-      const parentsReady = field.dependency.parentFieldNames.every((parentName) => {
-        const parent = document.querySelector(`[data-field="${CSS.escape(parentName)}"]`);
-        return parent?.value;
-      });
-
-      if (!parentsReady) {
-        select.disabled = true;
-        select.innerHTML = '<option value="">Сначала заполните предыдущее поле</option>';
-        continue;
-      }
-
-      await loadOptionsForField(field);
-    }
-
-    draftValues = collectValues();
-    updateProgress();
-  }
-
-  async function loadOptionsForField(field, selectedValue = "") {
-    const select = document.querySelector(`[data-field="${CSS.escape(field.name)}"]`);
-    if (!select) return;
-
-    select.disabled = true;
-    select.innerHTML = '<option value="">Загружаем варианты...</option>';
-
-    try {
-      const response = await bridge("getFieldOptions", {
-        documentType: activeSchema.documentType,
-        fieldName: field.name,
-        values: collectValues(),
-      });
-
-      if (!response.isSuccess) {
-        throw new Error((response.errors ?? []).join("\n") || "Не удалось загрузить варианты.");
-      }
-
-      select.innerHTML = `
-        <option value="">Выберите вариант</option>
-        ${(response.options ?? [])
-          .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.displayName)}</option>`)
-          .join("")}`;
-      select.disabled = false;
-      if (selectedValue) select.value = String(selectedValue);
-      refreshCustomSelect(select);
-    } catch (error) {
-      select.innerHTML = '<option value="">Не удалось загрузить варианты</option>';
-      setFieldError(field.name, error?.message ?? error);
-    }
-  }
-
-  function collectDependentDescendants(parentName) {
-    const result = [];
-    const queue = [parentName];
-    const visited = new Set();
-
-    while (queue.length) {
-      const current = queue.shift();
-      editableFields().forEach((field) => {
-        if (!visited.has(field.name) && field.dependency?.parentFieldNames?.includes(current)) {
-          visited.add(field.name);
-          result.push(field);
-          queue.push(field.name);
-        }
-      });
-    }
-
-    return result;
   }
 
   async function handlePreview(event) {
     event.preventDefault();
     clearAllErrors();
     const button = document.querySelector("#preview-button");
-    setButtonBusy(button, true, "Проверяем данные...");
+    setButtonBusy(button, true, "Проверяем данные…");
 
     try {
       const values = collectValues();
@@ -1559,7 +2101,7 @@
         return;
       }
 
-      setButtonBusy(button, true, "Формируем документ...");
+      setButtonBusy(button, true, "Формируем документ…");
       const result = await bridge("generatePrintHtml", {
         documentType: activeSchema.documentType,
         values,
@@ -1570,16 +2112,15 @@
       });
 
       if (!result.isSuccess) {
-        throw new Error(
-          (result.errors ?? []).join("\n") || "Печатная форма не создана.",
-        );
+        throw new Error((result.errors ?? []).join("\n") || "Печатная форма не создана.");
       }
 
       generatedHtml = result.htmlContent;
+      formDirty = false;
       renderPreview();
     } catch (error) {
       showFormMessage(error?.message ?? error);
-      showToast("Не удалось создать предпросмотр", error?.message ?? error, "error");
+      showToast("Не удалось создать форму", error?.message ?? error, "error");
     } finally {
       if (document.body.contains(button)) {
         setButtonBusy(button, false);
@@ -1602,29 +2143,48 @@
       }));
   }
 
+  function setButtonBusy(button, busy, text = "") {
+    if (!button) return;
+    if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+    button.disabled = busy;
+    button.innerHTML = busy
+      ? `${icon("refresh", "icon--small")} ${escapeHtml(text)}`
+      : button.dataset.originalHtml;
+  }
+
   function showValidationErrors(errors) {
     const localizedErrors = errors.map(localizeValidationError);
     localizedErrors.forEach((error) => setFieldError(error.fieldName, error.message));
     showFormMessage(`Найдены ошибки: ${errors.length}. Исправьте отмеченные поля.`);
-    document.querySelector(".field--error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const firstError = document.querySelector(".field--error");
+    firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function localizeValidationError(error) {
     let message = String(error.message || "Поле заполнено некорректно.");
+
     if (/^The .+ field is required\.?$/i.test(message)) {
       message = "Заполнение обязательно.";
     }
 
     activeSchema.fields.forEach((schemaField) => {
-      message = message.split(schemaField.name).join(`"${schemaField.displayName}"`);
+      message = message.split(schemaField.name).join(`«${schemaField.displayName}»`);
     });
+    message = message
+      .replaceAll("DateOnly", "дата")
+      .replaceAll("TimeOnly", "время")
+      .replaceAll("DateTime", "дата и время")
+      .replaceAll("ListOptionKey", "вариант списка")
+      .replaceAll("bool", "логическое значение");
 
     return { fieldName: error.fieldName, message };
   }
 
   function setFieldError(fieldName, message) {
     if (!fieldName) return;
-    const wrapper = document.querySelector(`[data-field-wrapper="${CSS.escape(fieldName)}"]`);
+    const wrapper = document.querySelector(
+      `[data-field-wrapper="${CSS.escape(fieldName)}"]`,
+    );
     if (!wrapper) return;
     wrapper.classList.add("field--error");
     const error = wrapper.querySelector(".field-error");
@@ -1633,42 +2193,24 @@
 
   function clearFieldError(fieldName) {
     if (!fieldName) return;
-    const wrapper = document.querySelector(`[data-field-wrapper="${CSS.escape(fieldName)}"]`);
+    const wrapper = document.querySelector(
+      `[data-field-wrapper="${CSS.escape(fieldName)}"]`,
+    );
     wrapper?.classList.remove("field--error");
   }
 
   function clearAllErrors() {
-    document.querySelectorAll(".field--error").forEach((field) => field.classList.remove("field--error"));
-    clearFormMessage();
-  }
-
-  function clearFormMessage() {
-    const message = document.querySelector("#form-message");
-    message?.classList.remove("form-message--visible", "form-message--success");
+    document
+      .querySelectorAll(".field--error")
+      .forEach((field) => field.classList.remove("field--error"));
+    document.querySelector("#form-message")?.classList.remove("form-message--visible");
   }
 
   function showFormMessage(message) {
     const messageElement = document.querySelector("#form-message");
     if (!messageElement) return;
     messageElement.querySelector("span").textContent = message;
-    messageElement.classList.remove("form-message--success");
     messageElement.classList.add("form-message--visible");
-  }
-
-  function showFormSuccess(message) {
-    const messageElement = document.querySelector("#form-message");
-    if (!messageElement) return;
-    messageElement.querySelector("span").textContent = message;
-    messageElement.classList.add("form-message--visible", "form-message--success");
-  }
-
-  function setButtonBusy(button, busy, text = "") {
-    if (!button) return;
-    if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
-    button.disabled = busy;
-    button.innerHTML = busy
-      ? `${icon("refresh", "icon--small")} ${escapeHtml(text)}`
-      : button.dataset.originalHtml;
   }
 
   function renderPreview() {
@@ -1683,25 +2225,11 @@
                 <p class="eyebrow">Шаг 2 из 3</p>
                 <h2>Предпросмотр документа</h2>
               </div>
-              <div class="output-format-control">
-                <span class="sr-only">Формат документа</span>
-                <select id="output-format" aria-label="Формат документа">
-                  <option value="html">HTML</option>
-                </select>
-              </div>
-              <button class="secondary-button" type="button" id="edit-document">
-                ${icon("pencil", "icon--small")} Редактировать
-              </button>
-              <button class="primary-button" type="button" id="save-document">
-                ${icon("printer", "icon--small")} Создать документ
-              </button>
+              <button class="secondary-button" id="edit-document">${icon("pencil", "icon--small")} Редактировать</button>
+              <button class="primary-button" id="save-document">${icon("printer", "icon--small")} Создать документ</button>
             </div>
             <div class="preview-frame-wrap">
-              <iframe
-                class="preview-frame"
-                id="print-preview"
-                title="Печатная форма"
-              ></iframe>
+              <iframe class="preview-frame" id="print-preview" title="Печатная форма"></iframe>
             </div>
           </div>
         </main>
@@ -1709,44 +2237,45 @@
 
     const frame = document.querySelector("#print-preview");
     frame.srcdoc = generatedHtml;
-
-    document
-      .querySelector("#close-document")
-      .addEventListener("click", () => navigateHome(true));
+    bindCommonDocumentActions();
+    enhanceSelects(app);
     document
       .querySelector("#edit-document")
       .addEventListener("click", renderDocumentForm);
     document
       .querySelector("#save-document")
-      .addEventListener("click", handleCreateDocument);
-
-    enhanceSelects(document);
+      .addEventListener("click", handlePrint);
     resetPageScroll();
   }
 
-  async function handleCreateDocument() {
+  async function handlePrint() {
     const button = document.querySelector("#save-document");
-    const outputFormat = document.querySelector("#output-format").value;
-    setButtonBusy(button, true, `Создаём ${outputFormat.toUpperCase()}...`);
+    const outputFormat = "html";
+    setButtonBusy(button, true, `Создаём ${outputFormat.toUpperCase()}…`);
 
     try {
-      const timestamp = Date.now();
-      const savedDocument = invoke
-        ? await invoke("save_print_document", {
-            documentType: activeSchema.documentType,
-            documentName: activeSchema.displayName,
-            html: generatedHtml,
-            outputFormat,
-          })
-        : {
-            id: `${activeSchema.documentType}-${timestamp}`,
-            documentType: activeSchema.documentType,
-            documentName: activeSchema.displayName,
-            format: outputFormat,
-            fileName: `${activeSchema.documentType}-${timestamp}.${outputFormat}`,
-            filePath: `Документы/MADOC/Печатные формы/${activeSchema.documentType}-${timestamp}.${outputFormat}`,
-            createdAt: timestamp,
-          };
+      let savedDocument;
+      if (demoMode) {
+        const timestamp = Date.now();
+        savedDocument = {
+          id: `${activeSchema.documentType}-${timestamp}`,
+          documentType: activeSchema.documentType,
+          documentName: activeSchema.displayName,
+          format: outputFormat,
+          fileName: `${activeSchema.documentType}-${timestamp}.${outputFormat}`,
+          filePath: `Документы/MADOC Concept/Печатные формы/${activeSchema.documentType}-${timestamp}.${outputFormat}`,
+          createdAt: timestamp,
+        };
+        ensureDemoSavedDocuments();
+        demoSavedDocuments.unshift(savedDocument);
+      } else {
+        savedDocument = await invoke("save_print_document", {
+          documentType: activeSchema.documentType,
+          documentName: activeSchema.displayName,
+          html: generatedHtml,
+          outputFormat,
+        });
+      }
 
       document.querySelectorAll(".step").forEach((step, index) => {
         step.classList.toggle("step--complete", index < 2);
@@ -1756,144 +2285,38 @@
         `${outputFormat.toUpperCase()} успешно создан`,
         savedDocument.filePath,
       );
-    } catch (error) {
-      showToast(
-        "Не удалось сохранить документ",
-        error?.message ?? error,
-        "error",
-      );
-    } finally {
       setButtonBusy(button, false);
+    } catch (error) {
+      setButtonBusy(button, false);
+      showToast("Не удалось сохранить документ", error?.message ?? error, "error");
     }
   }
 
-  function createDemoPrintHtml(values) {
-    const rows = editableFields()
-      .map((field) => {
-        const rawValue = values[field.name];
-        const value =
-          rawValue && typeof rawValue === "object"
-            ? `${rawValue.from ?? ""} — ${rawValue.to ?? ""}`
-            : rawValue ?? "";
-
-        return `
-          <div class="row">
-            <span>${escapeHtml(field.displayName)}</span>
-            <strong>${escapeHtml(value)}</strong>
-          </div>`;
-      })
-      .join("");
-
-    return `<!doctype html>
-      <html lang="ru">
-        <head>
-          <meta charset="UTF-8">
-          <title>${escapeHtml(activeSchema?.displayName ?? "Документ")}</title>
-          <style>
-            * { box-sizing: border-box; }
-            html, body { margin: 0; min-height: 100%; }
-            body {
-              padding: 44px 52px;
-              color: #111;
-              background: #fff;
-              font-family: "Times New Roman", Times, serif;
-            }
-            header { margin-bottom: 42px; text-align: right; font-weight: 700; }
-            h1 {
-              margin: 0 0 48px;
-              font-size: 24px;
-              text-align: center;
-              text-transform: uppercase;
-            }
-            .row {
-              display: grid;
-              grid-template-columns: 230px 1fr;
-              align-items: end;
-              gap: 12px;
-              margin-bottom: 22px;
-              font-size: 17px;
-            }
-            .row strong {
-              min-height: 24px;
-              padding: 0 5px 3px;
-              border-bottom: 1px solid #111;
-              font-weight: 400;
-            }
-            @media print {
-              body { padding: 0; }
-              @page { size: A4; margin: 1cm; }
-            }
-          </style>
-        </head>
-        <body>
-          <header>Форма MADOC</header>
-          <h1>${escapeHtml(activeSchema?.displayName ?? "Документ")}</h1>
-          ${rows}
-        </body>
-      </html>`;
-  }
-
-  function navigateHome(pushHistory) {
-    if (pushHistory) {
-      window.history.pushState({ documentType: null }, "", window.location.pathname);
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      const searchInput = document.querySelector("#archive-search");
+      if (!searchInput) return;
+      event.preventDefault();
+      searchInput.focus();
     }
-    activeSchema = null;
-    activeDescriptor = null;
-    generatedHtml = "";
-    draftValues = {};
-    renderHome();
-    resetPageScroll();
-  }
-
-  function renderFatalError(title, error) {
-    app.innerHTML = `
-      <main class="error-state">
-        <section class="error-card">
-          <span class="error-icon">${icon("warning")}</span>
-          <h1>${escapeHtml(title)}</h1>
-          <p>${escapeHtml(error?.message ?? error)}</p>
-          <button class="primary-button" type="button" id="retry-home">Повторить</button>
-        </section>
-      </main>`;
-    document.querySelector("#retry-home").addEventListener("click", initHome);
-  }
-
-  function showToast(title, message, tone = "success") {
-    if (!toastRegion) return;
-    const toast = document.createElement("div");
-    toast.className = `toast ${tone === "error" ? "toast--error" : ""}`;
-    toast.innerHTML = `
-      ${icon(tone === "error" ? "warning" : "check")}
-      <div class="toast-copy"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p></div>
-      <button class="toast-close" type="button" aria-label="Закрыть уведомление">
-        ${icon("close", "icon--small")}
-      </button>`;
-    toastRegion.append(toast);
-
-    let removeTimer;
-    const dismiss = () => {
-      window.clearTimeout(removeTimer);
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(8px)";
-      window.setTimeout(() => toast.remove(), 180);
-    };
-    toast.querySelector(".toast-close").addEventListener("click", dismiss);
-    removeTimer = window.setTimeout(dismiss, 5200);
-  }
+  });
 
   window.addEventListener("popstate", () => {
     const routeParams = new URLSearchParams(window.location.search);
-    const documentType = routeParams.get("document");
-    if (documentType) {
-      initDocument(documentType).catch((error) => renderFatalError("Форма не загрузилась", error));
+    activeDocumentType = routeParams.get("document");
+    if (activeDocumentType) {
+      initDocument(activeDocumentType);
+    } else if (routeParams.get("view") === "print-forms") {
+      navigateArchive(false);
     } else {
       navigateHome(false);
     }
   });
 
-  const initialDocumentType = params.get("document");
-  if (initialDocumentType) {
-    initDocument(initialDocumentType).catch((error) => renderFatalError("Форма не загрузилась", error));
+  if (activeDocumentType) {
+    initDocument(activeDocumentType);
+  } else if (params.get("view") === "print-forms") {
+    navigateArchive(false);
   } else {
     initHome();
   }

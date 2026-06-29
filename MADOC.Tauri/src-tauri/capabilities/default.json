@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "MADOC desktop windows",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
