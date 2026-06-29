@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "identifier": "ru.madoc.tauri",
   "build": {
+    "beforeDevCommand": "dotnet build ../MADOC.DesktopBridge/MADOC.DesktopBridge.csproj",
+    "beforeBuildCommand": "dotnet publish ../MADOC.DesktopBridge/MADOC.DesktopBridge.csproj -c Release -r win-x64 --self-contained true -o bridge-publish",
     "frontendDist": "../ui"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
-        "title": "MADOC Concept — Документы",
+        "title": "MADOC Concept - \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b",
         "width": 1180,
         "height": 820,
         "minWidth": 920,
