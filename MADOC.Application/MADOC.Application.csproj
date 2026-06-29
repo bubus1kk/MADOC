@@ -13,6 +13,7 @@
 
 	<ItemGroup>
 		<Content Include="Printing\Templates\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="Printing\Styles\**\*.*" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

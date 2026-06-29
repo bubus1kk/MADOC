@@ -19,6 +19,27 @@ public sealed class FileSystemPrintTemplateProviderTests
     }
 
     [TestMethod]
+    public void GetTemplate_InlinesLocalStylesheet()
+    {
+        var printingDirectory = CreateTemporaryDirectory();
+        var templatesDirectory = Path.Combine(printingDirectory, "Templates");
+        var stylesDirectory = Path.Combine(printingDirectory, "Styles");
+        Directory.CreateDirectory(templatesDirectory);
+        Directory.CreateDirectory(stylesDirectory);
+        File.WriteAllText(
+            Path.Combine(templatesDirectory, "template.html"),
+            """<html><head><link rel="stylesheet" href="Styles/template.css"></head></html>""");
+        File.WriteAllText(Path.Combine(stylesDirectory, "template.css"), "body { color: #000; }");
+        var provider = new FileSystemPrintTemplateProvider(templatesDirectory);
+
+        var template = provider.GetTemplate("template.html");
+
+        StringAssert.Contains(template, """<style data-madoc-source="Styles/template.css">""");
+        StringAssert.Contains(template, "body { color: #000; }");
+        Assert.IsFalse(template.Contains("<link", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
     public void GetTemplate_ThrowsWhenTemplateDoesNotExist()
     {
         var directory = CreateTemporaryDirectory();

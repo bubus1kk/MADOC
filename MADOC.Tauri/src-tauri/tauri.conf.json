@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MADOC.Tauri",
+  "productName": "MADOC",
   "version": "0.1.0",
   "identifier": "ru.madoc.tauri",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MADOC Concept - \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b",
+        "title": "MADOC - \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b",
         "width": 1180,
         "height": 820,
         "minWidth": 920,

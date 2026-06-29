@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    env,
+    env, fs,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
@@ -8,6 +9,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex,
     },
+    time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -183,6 +185,181 @@ async fn bridge_request(
     .map_err(|error| format!("Bridge-задача была прервана: {error}"))?
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredPrintDocument {
+    id: String,
+    document_type: String,
+    document_name: String,
+    format: String,
+    file_name: String,
+    file_path: String,
+    created_at: u64,
+}
+
+fn print_forms_directory(app: &AppHandle) -> Result<PathBuf, String> {
+    let documents_directory = app
+        .path()
+        .document_dir()
+        .map_err(|error| format!("Не удалось определить папку документов: {error}"))?;
+    let target_directory = documents_directory
+        .join("MADOC")
+        .join("Печатные формы");
+    fs::create_dir_all(&target_directory)
+        .map_err(|error| format!("Не удалось создать папку печатных форм: {error}"))?;
+    Ok(target_directory)
+}
+
+fn print_forms_metadata_directory(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_directory = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Не удалось определить папку данных приложения: {error}"))?;
+    let metadata_directory = app_data_directory.join("print-form-index");
+    fs::create_dir_all(&metadata_directory)
+        .map_err(|error| format!("Не удалось создать индекс печатных форм: {error}"))?;
+    Ok(metadata_directory)
+}
+
+fn is_print_form_metadata(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with(".madoc.json"))
+}
+
+fn migrate_legacy_print_form_metadata(
+    print_forms_directory: &Path,
+    metadata_directory: &Path,
+) -> Result<(), String> {
+    for entry in fs::read_dir(print_forms_directory)
+        .map_err(|error| format!("Не удалось проверить старый индекс печатных форм: {error}"))?
+    {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let legacy_path = entry.path();
+        if !is_print_form_metadata(&legacy_path) {
+            continue;
+        }
+
+        let Some(file_name) = legacy_path.file_name() else {
+            continue;
+        };
+        let metadata_path = metadata_directory.join(file_name);
+
+        if metadata_path.exists() {
+            fs::remove_file(&legacy_path)
+                .map_err(|error| format!("Не удалось удалить старый файл индекса: {error}"))?;
+            continue;
+        }
+
+        if fs::rename(&legacy_path, &metadata_path).is_err() {
+            fs::copy(&legacy_path, &metadata_path)
+                .map_err(|error| format!("Не удалось перенести индекс печатных форм: {error}"))?;
+            fs::remove_file(&legacy_path)
+                .map_err(|error| format!("Не удалось удалить старый файл индекса: {error}"))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn prepare_print_form_storage(app: &AppHandle) -> Result<(PathBuf, PathBuf), String> {
+    let print_forms_directory = print_forms_directory(app)?;
+    let metadata_directory = print_forms_metadata_directory(app)?;
+    migrate_legacy_print_form_metadata(&print_forms_directory, &metadata_directory)?;
+    Ok((print_forms_directory, metadata_directory))
+}
+
+fn safe_file_component(value: &str) -> String {
+    let normalized = value
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .split('-')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+
+    if normalized.is_empty() {
+        "document".to_owned()
+    } else {
+        normalized
+    }
+}
+
+fn unix_time_millis() -> Result<u64, String> {
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| format!("Системное время недоступно: {error}"))?;
+    Ok(duration.as_millis() as u64)
+}
+
+fn save_print_document_sync(
+    app: AppHandle,
+    document_type: String,
+    document_name: String,
+    html: String,
+    output_format: String,
+) -> Result<StoredPrintDocument, String> {
+    let format = output_format.trim().to_ascii_lowercase();
+    if format != "html" {
+        return Err("Поддерживается только формат HTML.".to_owned());
+    }
+
+    let (target_directory, metadata_directory) = prepare_print_form_storage(&app)?;
+    let timestamp = unix_time_millis()?;
+    let safe_name = safe_file_component(&document_name);
+    let id = format!(
+        "{}-{timestamp}",
+        safe_file_component(&document_type).to_ascii_lowercase()
+    );
+    let file_name = format!("{safe_name}-{timestamp}.html");
+    let file_path = target_directory.join(&file_name);
+
+    fs::write(&file_path, &html)
+        .map_err(|error| format!("Не удалось сохранить HTML-форму: {error}"))?;
+
+    let document = StoredPrintDocument {
+        id: id.clone(),
+        document_type,
+        document_name,
+        format,
+        file_name,
+        file_path: file_path.to_string_lossy().into_owned(),
+        created_at: timestamp,
+    };
+    let metadata_path = metadata_directory.join(format!("{id}.madoc.json"));
+    let metadata = serde_json::to_string_pretty(&document)
+        .map_err(|error| format!("Не удалось подготовить описание документа: {error}"))?;
+    fs::write(metadata_path, metadata)
+        .map_err(|error| format!("Не удалось сохранить описание документа: {error}"))?;
+
+    Ok(document)
+}
+
+#[tauri::command]
+async fn save_print_document(
+    app: AppHandle,
+    document_type: String,
+    document_name: String,
+    html: String,
+    output_format: String,
+) -> Result<StoredPrintDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        save_print_document_sync(app, document_type, document_name, html, output_format)
+    })
+    .await
+    .map_err(|error| format!("Создание документа было прервано: {error}"))?
+}
+
 fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
     if let Ok(configured_path) = env::var("MADOC_BRIDGE_PATH") {
         return PathBuf::from(configured_path);
@@ -240,7 +417,10 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![bridge_request])
+        .invoke_handler(tauri::generate_handler![
+            bridge_request,
+            save_print_document
+        ])
         .run(tauri::generate_context!())
         .expect("error while running MADOC.Tauri");
 }
