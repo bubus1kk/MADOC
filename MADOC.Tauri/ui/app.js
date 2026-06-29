@@ -142,6 +142,7 @@
   let documentTypes = [];
   let activeSchema = null;
   let activeDescriptor = null;
+  let generatedHtml = "";
   let draftValues = {};
 
   function textField(name, displayName, isRequired, maxLength, isMultiline = false) {
@@ -925,6 +926,14 @@
       return { isValid: true, errors: [] };
     }
 
+    if (command === "generatePrintHtml") {
+      return {
+        isSuccess: true,
+        htmlContent: createDemoPrintHtml(payload.values ?? {}),
+        errors: [],
+      };
+    }
+
     throw new Error(`Команда ${command} недоступна.`);
   }
 
@@ -1079,6 +1088,7 @@
         displayName: schema.displayName,
       };
     document.title = `${schema.displayName} — MADOC Concept`;
+    generatedHtml = "";
     draftValues = {};
     renderDocumentForm();
   }
@@ -1092,7 +1102,7 @@
     const steps = [
       ["Заполнение", "Введите исходные данные"],
       ["Предпросмотр", "Проверьте печатную форму"],
-      ["Сохранение", "Создайте HTML или PDF"],
+      ["Печать", "Распечатайте HTML-документ"],
     ];
 
     return `
@@ -1127,13 +1137,18 @@
       </aside>`;
   }
 
-  function toolbarMarkup() {
+  function toolbarMarkup(mode = "form") {
     return `
       <header class="form-toolbar">
         <div class="breadcrumb">
           <span>Шаблоны</span>${icon("chevronRight", "icon--small")}
           <strong>${escapeHtml(activeSchema.displayName)}</strong>
         </div>
+        ${
+          mode === "preview"
+            ? '<span class="toolbar-state toolbar-state--ready">Форма сформирована</span>'
+            : ""
+        }
       </header>`;
   }
 
@@ -1177,8 +1192,8 @@
 
               <footer class="form-actions">
                 <button class="ghost-button" type="button" id="reset-form">${icon("refresh", "icon--small")} Очистить</button>
-                <button class="primary-button" type="submit" id="validate-form">
-                  Проверить данные ${icon("arrowRight", "icon--small")}
+                <button class="primary-button" type="submit" id="preview-button">
+                  Предпросмотр ${icon("arrowRight", "icon--small")}
                 </button>
               </footer>
             </form>
@@ -1310,7 +1325,7 @@
 
   function bindFormActions() {
     const form = document.querySelector("#document-form");
-    form.addEventListener("submit", handleValidation);
+    form.addEventListener("submit", handlePreview);
     form.addEventListener("input", handleFormChange);
     form.addEventListener("change", handleFormChange);
 
@@ -1519,10 +1534,10 @@
     return result;
   }
 
-  async function handleValidation(event) {
+  async function handlePreview(event) {
     event.preventDefault();
     clearAllErrors();
-    const button = document.querySelector("#validate-form");
+    const button = document.querySelector("#preview-button");
     setButtonBusy(button, true, "Проверяем данные...");
 
     try {
@@ -1544,14 +1559,31 @@
         return;
       }
 
-      document.querySelector("#validation-step")?.classList.add("step--complete");
-      showFormSuccess("Данные заполнены корректно.");
-      showToast("Проверка пройдена", "Форма готова к дальнейшей работе.");
+      setButtonBusy(button, true, "Формируем документ...");
+      const result = await bridge("generatePrintHtml", {
+        documentType: activeSchema.documentType,
+        values,
+        generatedFields: {},
+        templateFileName: activeDescriptor.templateFileName,
+        strictMode: true,
+        htmlEncodeValues: true,
+      });
+
+      if (!result.isSuccess) {
+        throw new Error(
+          (result.errors ?? []).join("\n") || "Печатная форма не создана.",
+        );
+      }
+
+      generatedHtml = result.htmlContent;
+      renderPreview();
     } catch (error) {
       showFormMessage(error?.message ?? error);
-      showToast("Не удалось проверить форму", error?.message ?? error, "error");
+      showToast("Не удалось создать предпросмотр", error?.message ?? error, "error");
     } finally {
-      setButtonBusy(button, false);
+      if (document.body.contains(button)) {
+        setButtonBusy(button, false);
+      }
     }
   }
 
@@ -1639,12 +1671,143 @@
       : button.dataset.originalHtml;
   }
 
+  function renderPreview() {
+    app.innerHTML = `
+      <div class="form-shell preview-layout">
+        ${sidebarMarkup(2)}
+        <main class="form-workspace">
+          ${toolbarMarkup("preview")}
+          <div class="preview-workspace">
+            <div class="preview-toolbar">
+              <div class="preview-toolbar-copy">
+                <p class="eyebrow">Шаг 2 из 3</p>
+                <h2>Предпросмотр документа</h2>
+              </div>
+              <div class="output-format-control">
+                <span class="sr-only">Формат документа</span>
+                <select id="output-format" aria-label="Формат документа">
+                  <option value="html">HTML</option>
+                </select>
+              </div>
+              <button class="secondary-button" type="button" id="edit-document">
+                ${icon("pencil", "icon--small")} Редактировать
+              </button>
+              <button class="primary-button" type="button" id="save-document">
+                ${icon("printer", "icon--small")} Создать документ
+              </button>
+            </div>
+            <div class="preview-frame-wrap">
+              <iframe
+                class="preview-frame"
+                id="print-preview"
+                title="Печатная форма"
+              ></iframe>
+            </div>
+          </div>
+        </main>
+      </div>`;
+
+    const frame = document.querySelector("#print-preview");
+    frame.srcdoc = generatedHtml;
+
+    document
+      .querySelector("#close-document")
+      .addEventListener("click", () => navigateHome(true));
+    document
+      .querySelector("#edit-document")
+      .addEventListener("click", renderDocumentForm);
+    document
+      .querySelector("#save-document")
+      .addEventListener("click", printPreviewHtml);
+
+    enhanceSelects(document);
+    resetPageScroll();
+  }
+
+  function printPreviewHtml() {
+    const frame = document.querySelector("#print-preview");
+    if (!frame?.contentWindow) {
+      showToast("Печать недоступна", "Предпросмотр документа ещё не загружен.", "error");
+      return;
+    }
+
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  }
+
+  function createDemoPrintHtml(values) {
+    const rows = editableFields()
+      .map((field) => {
+        const rawValue = values[field.name];
+        const value =
+          rawValue && typeof rawValue === "object"
+            ? `${rawValue.from ?? ""} — ${rawValue.to ?? ""}`
+            : rawValue ?? "";
+
+        return `
+          <div class="row">
+            <span>${escapeHtml(field.displayName)}</span>
+            <strong>${escapeHtml(value)}</strong>
+          </div>`;
+      })
+      .join("");
+
+    return `<!doctype html>
+      <html lang="ru">
+        <head>
+          <meta charset="UTF-8">
+          <title>${escapeHtml(activeSchema?.displayName ?? "Документ")}</title>
+          <style>
+            * { box-sizing: border-box; }
+            html, body { margin: 0; min-height: 100%; }
+            body {
+              padding: 44px 52px;
+              color: #111;
+              background: #fff;
+              font-family: "Times New Roman", Times, serif;
+            }
+            header { margin-bottom: 42px; text-align: right; font-weight: 700; }
+            h1 {
+              margin: 0 0 48px;
+              font-size: 24px;
+              text-align: center;
+              text-transform: uppercase;
+            }
+            .row {
+              display: grid;
+              grid-template-columns: 230px 1fr;
+              align-items: end;
+              gap: 12px;
+              margin-bottom: 22px;
+              font-size: 17px;
+            }
+            .row strong {
+              min-height: 24px;
+              padding: 0 5px 3px;
+              border-bottom: 1px solid #111;
+              font-weight: 400;
+            }
+            @media print {
+              body { padding: 0; }
+              @page { size: A4; margin: 1cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <header>Форма MADOC</header>
+          <h1>${escapeHtml(activeSchema?.displayName ?? "Документ")}</h1>
+          ${rows}
+        </body>
+      </html>`;
+  }
+
   function navigateHome(pushHistory) {
     if (pushHistory) {
       window.history.pushState({ documentType: null }, "", window.location.pathname);
     }
     activeSchema = null;
     activeDescriptor = null;
+    generatedHtml = "";
     draftValues = {};
     renderHome();
     resetPageScroll();
