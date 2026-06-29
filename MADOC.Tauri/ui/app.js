@@ -984,7 +984,7 @@
   function renderHome() {
     activeSchema = null;
     activeDescriptor = null;
-    document.title = "MADOC Concept - Документы";
+    document.title = "MADOC - Документы";
     app.innerHTML = `
       <div class="app-shell">
         ${appHeaderMarkup("templates")}
@@ -1087,7 +1087,7 @@
         key: documentType,
         displayName: schema.displayName,
       };
-    document.title = `${schema.displayName} — MADOC Concept`;
+    document.title = `${schema.displayName} — MADOC`;
     generatedHtml = "";
     draftValues = {};
     renderDocumentForm();
@@ -1102,7 +1102,7 @@
     const steps = [
       ["Заполнение", "Введите исходные данные"],
       ["Предпросмотр", "Проверьте печатную форму"],
-      ["Печать", "Распечатайте HTML-документ"],
+      ["Сохранение", "Создайте HTML-документ"],
     ];
 
     return `
@@ -1718,21 +1718,53 @@
       .addEventListener("click", renderDocumentForm);
     document
       .querySelector("#save-document")
-      .addEventListener("click", printPreviewHtml);
+      .addEventListener("click", handleCreateDocument);
 
     enhanceSelects(document);
     resetPageScroll();
   }
 
-  function printPreviewHtml() {
-    const frame = document.querySelector("#print-preview");
-    if (!frame?.contentWindow) {
-      showToast("Печать недоступна", "Предпросмотр документа ещё не загружен.", "error");
-      return;
-    }
+  async function handleCreateDocument() {
+    const button = document.querySelector("#save-document");
+    const outputFormat = document.querySelector("#output-format").value;
+    setButtonBusy(button, true, `Создаём ${outputFormat.toUpperCase()}...`);
 
-    frame.contentWindow.focus();
-    frame.contentWindow.print();
+    try {
+      const timestamp = Date.now();
+      const savedDocument = invoke
+        ? await invoke("save_print_document", {
+            documentType: activeSchema.documentType,
+            documentName: activeSchema.displayName,
+            html: generatedHtml,
+            outputFormat,
+          })
+        : {
+            id: `${activeSchema.documentType}-${timestamp}`,
+            documentType: activeSchema.documentType,
+            documentName: activeSchema.displayName,
+            format: outputFormat,
+            fileName: `${activeSchema.documentType}-${timestamp}.${outputFormat}`,
+            filePath: `Документы/MADOC/Печатные формы/${activeSchema.documentType}-${timestamp}.${outputFormat}`,
+            createdAt: timestamp,
+          };
+
+      document.querySelectorAll(".step").forEach((step, index) => {
+        step.classList.toggle("step--complete", index < 2);
+        step.classList.toggle("step--active", index === 2);
+      });
+      showToast(
+        `${outputFormat.toUpperCase()} успешно создан`,
+        savedDocument.filePath,
+      );
+    } catch (error) {
+      showToast(
+        "Не удалось сохранить документ",
+        error?.message ?? error,
+        "error",
+      );
+    } finally {
+      setButtonBusy(button, false);
+    }
   }
 
   function createDemoPrintHtml(values) {
