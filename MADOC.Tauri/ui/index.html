@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#dcebf7" />
+    <title>MADOC Concept — Документы</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <span class="brand" aria-label="MADOC">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">MADOC</span>
+        </span>
+
+        <nav class="app-nav" aria-label="Основная навигация">
+          <button class="nav-item nav-item--active" type="button">Шаблоны</button>
+          <button class="nav-item" type="button">Печатные формы</button>
+        </nav>
+      </header>
+
+      <main class="home-content">
+        <section class="hero">
+          <p class="eyebrow">Конструктор документов</p>
+          <h1>Какой документ <span>подготовить?</span></h1>
+          <p class="hero-description">
+            Выберите шаблон, заполните данные и получите готовую печатную форму.
+            Всё работает локально на этом компьютере.
+          </p>
+        </section>
+
+        <section class="catalog-panel" aria-labelledby="catalog-title">
+          <div class="catalog-toolbar">
+            <div class="catalog-heading">
+              <h2 id="catalog-title">Шаблоны документов</h2>
+              <p>Выберите форму для заполнения</p>
+            </div>
+          </div>
+
+          <div class="template-grid">
+            <button class="template-card" type="button">
+              <span class="template-card-top">
+                <span class="template-icon">
+                  <svg class="icon icon--large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m2 10 10-5 10 5-10 5Z"></path>
+                    <path d="M6 12v5c3 2 9 2 12 0v-5M22 10v6"></path>
+                  </svg>
+                </span>
+                <span class="template-badge">Справка</span>
+              </span>
+              <h3>Заявка на справку</h3>
+              <p>Справка об обучении, доходах или составе семьи.</p>
+              <span class="template-card-footer">
+                Заполнить форму
+                <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
+            </button>
+
+            <button class="template-card" type="button">
+              <span class="template-card-top">
+                <span class="template-icon">
+                  <svg class="icon icon--large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+                  </svg>
+                </span>
+                <span class="template-badge">Заявление</span>
+              </span>
+              <h3>Заявление студента</h3>
+              <p>Универсальное заявление студента по учебным вопросам.</p>
+              <span class="template-card-footer">
+                Заполнить форму
+                <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
+            </button>
+
+            <button class="template-card" type="button">
+              <span class="template-card-top">
+                <span class="template-icon">
+                  <svg class="icon icon--large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path>
+                  </svg>
+                </span>
+                <span class="template-badge">Договор</span>
+              </span>
+              <h3>Договор оказания услуг</h3>
+              <p>Договор на оказание услуг с готовыми реквизитами.</p>
+              <span class="template-card-footer">
+                Заполнить форму
+                <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
+            </button>
+
+            <button class="template-card" type="button">
+              <span class="template-card-top">
+                <span class="template-icon">
+                  <svg class="icon icon--large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M22 2 11 13"></path>
+                    <path d="m22 2-7 20-4-9-9-4Z"></path>
+                  </svg>
+                </span>
+                <span class="template-badge">Командировка</span>
+              </span>
+              <h3>Заявка на командировку</h3>
+              <p>Заявка на служебную поездку и маршрут.</p>
+              <span class="template-card-footer">
+                Заполнить форму
+                <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
+            </button>
+
+            <button class="template-card" type="button">
+              <span class="template-card-top">
+                <span class="template-icon">
+                  <svg class="icon icon--large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 21h18"></path>
+                    <path d="M6 21V7l6-4 6 4v14"></path>
+                    <path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01M10 21v-4h4v4"></path>
+                  </svg>
+                </span>
+                <span class="template-badge">Помещение</span>
+              </span>
+              <h3>Заявка на бронирование аудитории</h3>
+              <p>Бронирование аудитории для занятия или мероприятия.</p>
+              <span class="template-card-footer">
+                Заполнить форму
+                <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <p class="privacy-note">
+          <svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          Данные не покидают устройство и не отправляются в интернет
+        </p>
+      </main>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
