@@ -1578,3 +1578,43 @@ body {
   }
 
 }
+
+.brand-logo {
+  display: block;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  object-fit: contain;
+}
+
+.brand-logo--large {
+  width: 46px;
+  height: 46px;
+  flex-basis: 46px;
+}
+
+.app-header > .brand {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  align-self: center;
+  gap: 9px;
+}
+
+.app-header > .brand .brand-copy {
+  display: flex;
+  height: 36px;
+  align-items: center;
+}
+
+.app-header > .brand .brand-name {
+  line-height: 1;
+}
+
+.app-header > .app-nav {
+  align-self: center;
+}
+
+.form-sidebar .brand-logo {
+  filter: invert(89%) sepia(30%) saturate(780%) hue-rotate(24deg) brightness(101%);
+}
