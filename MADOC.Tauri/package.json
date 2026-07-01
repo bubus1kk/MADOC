@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prepare:pdfjs": "node ./scripts/sync-pdfjs.mjs",
     "tauri": "tauri",
-    "dev": "tauri dev",
-    "build": "tauri build"
+    "dev": "npm run prepare:pdfjs && tauri dev",
+    "build": "npm run prepare:pdfjs && tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.0"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.1.200"
   }
 }
 
