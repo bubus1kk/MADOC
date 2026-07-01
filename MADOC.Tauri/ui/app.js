@@ -177,6 +177,7 @@
   let activeDocumentType = params.get("document");
   let savedDocuments = [];
   let demoSavedDocuments = [];
+  let pdfJsModulePromise = null;
 
   function icon(name, className = "") {
     return `<svg class="icon ${className}" viewBox="0 0 24 24" aria-hidden="true">${icons[name] ?? icons.file}</svg>`;
@@ -1300,7 +1301,7 @@
     const steps = [
       ["Заполнение", "Введите исходные данные"],
       ["Предпросмотр", "Проверьте печатную форму"],
-      ["Сохранение", "Создайте HTML"],
+      ["Сохранение", "Создайте HTML или PDF"],
     ];
     return `
       <aside class="form-sidebar">
@@ -1568,12 +1569,12 @@
     const now = Date.now();
     demoSavedDocuments = [
       {
-        id: "demo-certificate-html",
+        id: "demo-certificate-pdf",
         documentType: "certificate_request",
         documentName: "Заявка на справку",
-        format: "html",
-        fileName: "Заявка-на-справку.html",
-        filePath: "Документы/MADOC/Печатные формы/Заявка-на-справку.html",
+        format: "pdf",
+        fileName: "Заявка-на-справку.pdf",
+        filePath: "Документы/MADOC/Печатные формы/Заявка-на-справку.pdf",
         createdAt: now - 45 * 60 * 1000,
       },
       {
@@ -1586,15 +1587,53 @@
         createdAt: now - 2 * 24 * 60 * 60 * 1000,
       },
       {
-        id: "demo-trip-html",
+        id: "demo-trip-pdf",
         documentType: "business_trip_request",
         documentName: "Заявка на командировку",
-        format: "html",
-        fileName: "Заявка-на-командировку.html",
-        filePath: "Документы/MADOC/Печатные формы/Заявка-на-командировку.html",
+        format: "pdf",
+        fileName: "Заявка-на-командировку.pdf",
+        filePath: "Документы/MADOC/Печатные формы/Заявка-на-командировку.pdf",
         createdAt: now - 12 * 24 * 60 * 60 * 1000,
       },
     ];
+  }
+
+  function createDemoPdfDataUrl() {
+    const stream = [
+      "BT",
+      "/F1 24 Tf",
+      "72 760 Td",
+      "(MADOC PDF preview) Tj",
+      "/F1 12 Tf",
+      "0 -34 Td",
+      "(Custom local viewer) Tj",
+      "ET",
+    ].join("\n");
+    const objects = [
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ];
+    let pdf = "%PDF-1.4\n";
+    const offsets = [0];
+
+    objects.forEach((object, index) => {
+      offsets.push(pdf.length);
+      pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    });
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += "0000000000 65535 f \n";
+    offsets.slice(1).forEach((offset) => {
+      pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+    });
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+    pdf += `startxref\n${xrefOffset}\n%%EOF`;
+
+    return `data:application/pdf;base64,${btoa(pdf)}`;
   }
 
   async function listStoredPrintDocuments() {
@@ -1609,6 +1648,13 @@
     if (demoMode) {
       const document = demoSavedDocuments.find((item) => item.id === documentId);
       if (!document) throw new Error("Печатная форма не найдена.");
+      if (document.format === "pdf") {
+        return {
+          document,
+          htmlContent: null,
+          dataUrl: createDemoPdfDataUrl(),
+        };
+      }
       return {
         document,
         htmlContent: createDemoPrintHtml({
@@ -1616,6 +1662,7 @@
           Формат: document.format.toUpperCase(),
           Создан: formatStoredDate(document.createdAt),
         }),
+        dataUrl: null,
       };
     }
     return invoke("read_print_document", { documentId });
@@ -1673,7 +1720,7 @@
             <div>
               <p class="eyebrow">Локальный архив</p>
               <h1>Печатные формы</h1>
-              <p>Готовые HTML-документы хранятся в папке «Документы\\MADOC\\Печатные формы».</p>
+              <p>Готовые HTML- и PDF-документы хранятся в папке «Документы\\MADOC\\Печатные формы».</p>
             </div>
           </section>
 
@@ -1777,7 +1824,7 @@
             data-document-type="${escapeHtml(document.documentType)}"
           >
             <span class="saved-form-icon" style="color:${meta.color};background:${meta.wash}">
-              ${icon("contract", "icon--large")}
+              ${icon(document.format === "pdf" ? "file" : "contract", "icon--large")}
               <small>${escapeHtml(document.format.toUpperCase())}</small>
             </span>
             <span class="saved-form-copy">
@@ -1832,7 +1879,45 @@
             </div>
           </div>
           <div class="preview-frame-wrap saved-preview-frame-wrap">
-            <iframe class="preview-frame" id="stored-preview" title="Сохранённая печатная форма"></iframe>
+            ${
+              savedDocument.format === "pdf"
+                ? `
+                  <section class="pdf-viewer" aria-label="Просмотр PDF">
+                    <div class="pdf-viewer-toolbar">
+                      <div class="pdf-viewer-toolbar-group">
+                        <button class="pdf-viewer-button" id="pdf-previous" type="button" aria-label="Предыдущая страница">
+                          ${icon("arrowLeft", "icon--small")}
+                        </button>
+                        <span class="pdf-page-indicator" id="pdf-page-indicator">1 / 1</span>
+                        <button class="pdf-viewer-button" id="pdf-next" type="button" aria-label="Следующая страница">
+                          ${icon("arrowRight", "icon--small")}
+                        </button>
+                      </div>
+                      <div class="pdf-viewer-title">
+                        ${icon("file", "icon--small")}
+                        <span>PDF-документ</span>
+                      </div>
+                      <div class="pdf-viewer-toolbar-group">
+                        <button class="pdf-viewer-button" id="pdf-zoom-out" type="button" aria-label="Уменьшить масштаб">
+                          ${icon("minus", "icon--small")}
+                        </button>
+                        <span class="pdf-zoom-indicator" id="pdf-zoom-indicator">100%</span>
+                        <button class="pdf-viewer-button" id="pdf-zoom-in" type="button" aria-label="Увеличить масштаб">
+                          ${icon("plus", "icon--small")}
+                        </button>
+                        <button class="pdf-viewer-fit" id="pdf-fit-width" type="button">По ширине</button>
+                      </div>
+                    </div>
+                    <div class="pdf-viewer-stage" id="pdf-viewer-stage">
+                      <div class="pdf-viewer-loading" id="pdf-viewer-loading">
+                        ${icon("refresh", "icon--large")}
+                        <span>Загружаем PDF…</span>
+                      </div>
+                      <canvas class="pdf-page-canvas" id="pdf-page-canvas" hidden></canvas>
+                    </div>
+                  </section>`
+                : '<iframe class="preview-frame" id="stored-preview" title="Сохранённая печатная форма"></iframe>'
+            }
           </div>
         </main>
       </div>`;
@@ -1841,9 +1926,148 @@
     document
       .querySelector("#back-to-archive")
       .addEventListener("click", () => renderPrintFormsPage());
-    const frame = document.querySelector("#stored-preview");
-    frame.srcdoc = content.htmlContent ?? "";
+    if (content.htmlContent) {
+      const frame = document.querySelector("#stored-preview");
+      frame.srcdoc = content.htmlContent;
+    } else if (content.dataUrl) {
+      initializePdfViewer(content.dataUrl);
+    }
     resetPageScroll();
+  }
+
+  function pdfAssetUrl(path) {
+    return new URL(`./vendor/pdfjs/${path}`, window.location.href).href;
+  }
+
+  function loadPdfJs() {
+    if (!pdfJsModulePromise) {
+      pdfJsModulePromise = import(pdfAssetUrl("pdf.min.js")).then((pdfjs) => {
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfAssetUrl("pdf.worker.min.js");
+        return pdfjs;
+      });
+    }
+    return pdfJsModulePromise;
+  }
+
+  function decodePdfDataUrl(dataUrl) {
+    const separator = dataUrl.indexOf(",");
+    if (separator < 0) throw new Error("Некорректные данные PDF.");
+    const binary = atob(dataUrl.slice(separator + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  async function initializePdfViewer(dataUrl) {
+    const stage = document.querySelector("#pdf-viewer-stage");
+    const canvas = document.querySelector("#pdf-page-canvas");
+    const loading = document.querySelector("#pdf-viewer-loading");
+    if (!stage || !canvas || !loading) return;
+
+    try {
+      const pdfjs = await loadPdfJs();
+      const loadingTask = pdfjs.getDocument({
+        data: decodePdfDataUrl(dataUrl),
+        cMapUrl: pdfAssetUrl("cmaps/"),
+        cMapPacked: true,
+        standardFontDataUrl: pdfAssetUrl("standard_fonts/"),
+        wasmUrl: pdfAssetUrl("wasm/"),
+      });
+      const pdf = await loadingTask.promise;
+      const state = {
+        pdf,
+        pageNumber: 1,
+        scale: 1,
+        fitWidth: true,
+        renderTask: null,
+      };
+
+      const previous = document.querySelector("#pdf-previous");
+      const next = document.querySelector("#pdf-next");
+      const zoomOut = document.querySelector("#pdf-zoom-out");
+      const zoomIn = document.querySelector("#pdf-zoom-in");
+      const fitWidth = document.querySelector("#pdf-fit-width");
+      const pageIndicator = document.querySelector("#pdf-page-indicator");
+      const zoomIndicator = document.querySelector("#pdf-zoom-indicator");
+
+      const renderPage = async () => {
+        const page = await state.pdf.getPage(state.pageNumber);
+        const baseViewport = page.getViewport({ scale: 1 });
+        if (state.fitWidth) {
+          const availableWidth = Math.max(stage.clientWidth - 48, 280);
+          state.scale = Math.min(
+            2.5,
+            Math.max(0.5, availableWidth / baseViewport.width),
+          );
+        }
+
+        const viewport = page.getViewport({ scale: state.scale });
+        const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+        state.renderTask?.cancel();
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        canvas.hidden = false;
+        loading.hidden = true;
+
+        pageIndicator.textContent = `${state.pageNumber} / ${state.pdf.numPages}`;
+        zoomIndicator.textContent = `${Math.round(state.scale * 100)}%`;
+        previous.disabled = state.pageNumber <= 1;
+        next.disabled = state.pageNumber >= state.pdf.numPages;
+        fitWidth.classList.toggle("pdf-viewer-fit--active", state.fitWidth);
+
+        state.renderTask = page.render({
+          canvas,
+          viewport,
+          transform:
+            outputScale === 1
+              ? undefined
+              : [outputScale, 0, 0, outputScale, 0, 0],
+        });
+        try {
+          await state.renderTask.promise;
+        } catch (error) {
+          if (error?.name !== "RenderingCancelledException") throw error;
+        }
+      };
+
+      previous.addEventListener("click", () => {
+        if (state.pageNumber <= 1) return;
+        state.pageNumber -= 1;
+        renderPage();
+      });
+      next.addEventListener("click", () => {
+        if (state.pageNumber >= state.pdf.numPages) return;
+        state.pageNumber += 1;
+        renderPage();
+      });
+      zoomOut.addEventListener("click", () => {
+        state.fitWidth = false;
+        state.scale = Math.max(0.5, state.scale / 1.15);
+        renderPage();
+      });
+      zoomIn.addEventListener("click", () => {
+        state.fitWidth = false;
+        state.scale = Math.min(2.5, state.scale * 1.15);
+        renderPage();
+      });
+      fitWidth.addEventListener("click", () => {
+        state.fitWidth = true;
+        renderPage();
+      });
+
+      await renderPage();
+    } catch (error) {
+      stage.innerHTML = `
+        <div class="pdf-viewer-error">
+          ${icon("warning", "icon--large")}
+          <strong>Не удалось показать PDF</strong>
+          <span>${escapeHtml(error?.message ?? error)}</span>
+        </div>`;
+    }
   }
 
   function bindFormActions() {
@@ -2225,6 +2449,13 @@
                 <p class="eyebrow">Шаг 2 из 3</p>
                 <h2>Предпросмотр документа</h2>
               </div>
+              <div class="output-format-control">
+                <span class="sr-only">Формат документа</span>
+                <select id="output-format" aria-label="Формат документа">
+                  <option value="pdf">PDF</option>
+                  <option value="html">HTML</option>
+                </select>
+              </div>
               <button class="secondary-button" id="edit-document">${icon("pencil", "icon--small")} Редактировать</button>
               <button class="primary-button" id="save-document">${icon("printer", "icon--small")} Создать документ</button>
             </div>
@@ -2250,7 +2481,7 @@
 
   async function handlePrint() {
     const button = document.querySelector("#save-document");
-    const outputFormat = "html";
+    const outputFormat = document.querySelector("#output-format").value;
     setButtonBusy(button, true, `Создаём ${outputFormat.toUpperCase()}…`);
 
     try {

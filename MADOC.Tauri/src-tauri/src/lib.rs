@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -9,9 +10,11 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex,
     },
+    thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager, State};
+use url::Url;
 
 struct BridgeProcess {
     child: Child,
@@ -201,7 +204,8 @@ struct StoredPrintDocument {
 #[serde(rename_all = "camelCase")]
 struct StoredPrintDocumentContent {
     document: StoredPrintDocument,
-    html_content: String,
+    html_content: Option<String>,
+    data_url: Option<String>,
 }
 
 fn print_forms_directory(app: &AppHandle) -> Result<PathBuf, String> {
@@ -309,6 +313,91 @@ fn unix_time_millis() -> Result<u64, String> {
     Ok(duration.as_millis() as u64)
 }
 
+fn find_edge_executable() -> Option<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Some(program_files_x86) = env::var_os("ProgramFiles(x86)") {
+        candidates.push(
+            PathBuf::from(program_files_x86)
+                .join("Microsoft")
+                .join("Edge")
+                .join("Application")
+                .join("msedge.exe"),
+        );
+    }
+    if let Some(program_files) = env::var_os("ProgramFiles") {
+        candidates.push(
+            PathBuf::from(program_files)
+                .join("Microsoft")
+                .join("Edge")
+                .join("Application")
+                .join("msedge.exe"),
+        );
+    }
+    if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
+        candidates.push(
+            PathBuf::from(local_app_data)
+                .join("Microsoft")
+                .join("Edge")
+                .join("Application")
+                .join("msedge.exe"),
+        );
+    }
+
+    candidates.into_iter().find(|candidate| candidate.exists())
+}
+
+fn render_pdf(html_path: &Path, pdf_path: &Path) -> Result<(), String> {
+    let edge_path = find_edge_executable().ok_or_else(|| {
+        "Для создания PDF требуется Microsoft Edge, но он не найден на компьютере.".to_owned()
+    })?;
+    let html_url = Url::from_file_path(html_path)
+        .map_err(|_| "Не удалось сформировать локальный адрес HTML-файла.".to_owned())?;
+    let profile_directory = env::temp_dir().join("MADOC Concept").join("EdgePdfProfile");
+    fs::create_dir_all(&profile_directory)
+        .map_err(|error| format!("Не удалось подготовить конвертер PDF: {error}"))?;
+
+    let output = Command::new(edge_path)
+        .arg("--headless=new")
+        .arg("--disable-gpu")
+        .arg("--disable-extensions")
+        .arg("--no-pdf-header-footer")
+        .arg("--print-to-pdf-no-header")
+        .arg(format!(
+            "--user-data-dir={}",
+            profile_directory.to_string_lossy()
+        ))
+        .arg(format!("--print-to-pdf={}", pdf_path.to_string_lossy()))
+        .arg(html_url.as_str())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .creation_flags_no_window()
+        .output()
+        .map_err(|error| format!("Не удалось запустить конвертацию в PDF: {error}"))?;
+
+    if !output.status.success() {
+        let details = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "Microsoft Edge не смог создать PDF. {}",
+            details.trim()
+        ));
+    }
+
+    for _ in 0..30 {
+        if pdf_path
+            .metadata()
+            .map(|metadata| metadata.len() > 0)
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
+        thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    Err("Конвертация завершилась, но PDF-файл не был создан.".to_owned())
+}
+
 fn save_print_document_sync(
     app: AppHandle,
     document_type: String,
@@ -317,8 +406,8 @@ fn save_print_document_sync(
     output_format: String,
 ) -> Result<StoredPrintDocument, String> {
     let format = output_format.trim().to_ascii_lowercase();
-    if format != "html" {
-        return Err("Поддерживается только формат HTML.".to_owned());
+    if format != "html" && format != "pdf" {
+        return Err("Поддерживаются только форматы HTML и PDF.".to_owned());
     }
 
     let (target_directory, metadata_directory) = prepare_print_form_storage(&app)?;
@@ -331,8 +420,17 @@ fn save_print_document_sync(
     let file_name = format!("{safe_name}-{timestamp}.{format}");
     let file_path = target_directory.join(&file_name);
 
-    fs::write(&file_path, &html)
-        .map_err(|error| format!("Не удалось сохранить HTML-форму: {error}"))?;
+    if format == "html" {
+        fs::write(&file_path, &html)
+            .map_err(|error| format!("Не удалось сохранить HTML-форму: {error}"))?;
+    } else {
+        let temporary_html_path = target_directory.join(format!(".{id}.html"));
+        fs::write(&temporary_html_path, &html)
+            .map_err(|error| format!("Не удалось подготовить HTML для PDF: {error}"))?;
+        let render_result = render_pdf(&temporary_html_path, &file_path);
+        let _ = fs::remove_file(&temporary_html_path);
+        render_result?;
+    }
 
     let document = StoredPrintDocument {
         id: id.clone(),
@@ -391,9 +489,6 @@ fn load_stored_documents(app: &AppHandle) -> Result<Vec<StoredPrintDocument>, St
             Ok(document) => document,
             Err(_) => continue,
         };
-        if document.format != "html" {
-            continue;
-        }
         let document_path = target_directory.join(&document.file_name);
         if !document_path.exists() {
             continue;
@@ -422,12 +517,26 @@ fn read_print_document(
         .ok_or_else(|| "Печатная форма не найдена.".to_owned())?;
     let file_path = PathBuf::from(&document.file_path);
 
-    let html_content = fs::read_to_string(&file_path)
-        .map_err(|error| format!("Не удалось открыть HTML-форму: {error}"))?;
-    Ok(StoredPrintDocumentContent {
-        document,
-        html_content,
-    })
+    if document.format == "html" {
+        let html_content = fs::read_to_string(&file_path)
+            .map_err(|error| format!("Не удалось открыть HTML-форму: {error}"))?;
+        Ok(StoredPrintDocumentContent {
+            document,
+            html_content: Some(html_content),
+            data_url: None,
+        })
+    } else {
+        let content = fs::read(&file_path)
+            .map_err(|error| format!("Не удалось открыть PDF-форму: {error}"))?;
+        Ok(StoredPrintDocumentContent {
+            document,
+            html_content: None,
+            data_url: Some(format!(
+                "data:application/pdf;base64,{}",
+                BASE64.encode(content)
+            )),
+        })
+    }
 }
 
 fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
